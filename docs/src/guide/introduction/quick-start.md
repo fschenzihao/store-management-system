@@ -89,7 +89,6 @@ pnpm dev
 │
 ◆  Select the app you need to run [dev]:
 │  ● @vben/web-antd
-│  ○ @vben/web-antdv-next
 │  ○ @vben/web-ele
 │  ○ @vben/web-naive
 │  ○ @vben/docs

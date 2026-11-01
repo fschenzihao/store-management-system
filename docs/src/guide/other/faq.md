@@ -22,7 +22,7 @@
 
 ## apps/web-antd 能否独立运行
 
-**目前不支持。** 各个应用（`apps/web-antd`、`apps/web-ele`、`apps/web-naive`、`apps/web-tdesign`、`apps/web-antdv-next`）都必须保留在大仓目录内运行。
+**目前不支持。** 各个应用（`apps/web-antd`、`apps/web-ele`、`apps/web-naive`、`apps/web-tdesign`）都必须保留在大仓目录内运行。
 
 原因是这些应用并非自包含的独立项目，它们依赖大量位于 `packages/` 与 `internal/` 下的 workspace 包。以 `apps/web-antd` 为例，它的 `dependencies` 里有 20 个依赖，其中 14 个是 workspace 包：
 
@@ -47,7 +47,6 @@ pnpm dev:antd
 pnpm dev:ele
 pnpm dev:naive
 pnpm dev:tdesign
-pnpm dev:antdv-next
 ```
 
 ::: tip 关于 dev:antd

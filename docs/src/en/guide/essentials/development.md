@@ -54,8 +54,6 @@ The execution command is: `pnpm run [script]` or `npm run [script]`.
     "build:docker": "./scripts/deploy/build-local-docker-image.sh",
     // Build the web-antd application separately
     "build:antd": "pnpm run build --filter=@vben/web-antd",
-    // Build the web-antdv-next application separately
-    "build:antdv-next": "pnpm run build --filter=@vben/web-antdv-next",
     // Build the documentation separately
     "build:docs": "pnpm run build --filter=@vben/docs",
     // Build the web-ele application separately
@@ -86,8 +84,6 @@ The execution command is: `pnpm run [script]` or `npm run [script]`.
     "dev": "turbo-run dev",
     // Start the web-antd application
     "dev:antd": "pnpm -F @vben/web-antd run dev",
-    // Start the web-antdv-next application
-    "dev:antdv-next": "pnpm -F @vben/web-antdv-next run dev",
     // Start the documentation
     "dev:docs": "pnpm -F @vben/docs run dev",
     // Start the web-ele application
@@ -140,12 +136,6 @@ To run the `web-antd` application:
 
 ```bash
 pnpm dev:antd
-```
-
-To run the `web-antdv-next` application:
-
-```bash
-pnpm dev:antdv-next
 ```
 
 To run the `web-naive` application:

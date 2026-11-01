@@ -54,8 +54,6 @@ npm 脚本是项目常见的配置，用于执行一些常见的任务，比如�
     "build:docker": "./scripts/deploy/build-local-docker-image.sh",
     // 单独构建 web-antd 应用
     "build:antd": "pnpm run build --filter=@vben/web-antd",
-    // 单独构建 web-antdv-next 应用
-    "build:antdv-next": "pnpm run build --filter=@vben/web-antdv-next",
     // 单独构建文档
     "build:docs": "pnpm run build --filter=@vben/docs",
     // 单独构建 web-ele 应用
@@ -86,8 +84,6 @@ npm 脚本是项目常见的配置，用于执行一些常见的任务，比如�
     "dev": "turbo-run dev",
     // 启动 web-antd 应用
     "dev:antd": "pnpm -F @vben/web-antd run dev",
-    // 启动 web-antdv-next 应用
-    "dev:antdv-next": "pnpm -F @vben/web-antdv-next run dev",
     // 启动文档
     "dev:docs": "pnpm -F @vben/docs run dev",
     // 启动 web-ele 应用
@@ -140,12 +136,6 @@ pnpm dev
 
 ```bash
 pnpm dev:antd
-```
-
-运行 `web-antdv-next` 应用：
-
-```bash
-pnpm dev:antdv-next
 ```
 
 运行 `web-naive` 应用：
