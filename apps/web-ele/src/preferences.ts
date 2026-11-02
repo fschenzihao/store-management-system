@@ -14,4 +14,9 @@ export const overridesPreferences = defineOverridesPreferences({
     name: import.meta.env.VITE_APP_TITLE,
   },
   copyright: appCopyrightPreferences,
+  widget: {
+    // 不显示时区设置
+    timezone: false,
+    timezoneButtonPosition: 'none',
+  },
 });
