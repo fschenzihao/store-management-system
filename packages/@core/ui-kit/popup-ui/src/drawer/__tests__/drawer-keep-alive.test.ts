@@ -116,7 +116,7 @@ async function mountCachedPages(
         });
     },
   });
-  // eslint-disable-next-line vue/one-component-per-file -- Exercise the connectedComponent API used by the playground.
+  // eslint-disable-next-line vue/one-component-per-file -- Exercise the connectedComponent API.
   const ConnectedDrawer = defineComponent({
     setup() {
       const [Drawer] = useVbenDrawer();
