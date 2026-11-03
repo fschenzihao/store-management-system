@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   version TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   executed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CHECK (length(version) > 0),
-  CHECK (length(name) > 0)
+  CHECK (length(trim(version)) > 0),
+  CHECK (length(trim(name)) > 0),
+  -- executed_at 必须是 UTC 文本时间，格式为 YYYY-MM-DD HH:MM:SS
+  CHECK (executed_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]')
 ) STRICT;

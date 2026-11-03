@@ -11,9 +11,12 @@ CREATE TABLE IF NOT EXISTS recharge_record (
   recharge_time TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (customer_id) REFERENCES customer (customer_id) ON DELETE RESTRICT,
   CHECK (amount_cents > 0),
-  CHECK (length(platform) > 0),
+  -- 平台去空格后不能为空，且只能取约定的三种取值
+  CHECK (length(trim(platform)) > 0),
   CHECK (length(platform) <= 20),
-  CHECK (platform IN ('微信', '支付宝', '现金'))
+  CHECK (platform IN ('微信', '支付宝', '现金')),
+  -- recharge_time 必须是 UTC 文本时间，格式为 YYYY-MM-DD HH:MM:SS
+  CHECK (recharge_time GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]')
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS idx_recharge_customer_time ON recharge_record (customer_id, recharge_time);
