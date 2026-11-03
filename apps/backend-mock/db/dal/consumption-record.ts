@@ -94,3 +94,42 @@ export function insertConsumptionRecord(
   }
   return record;
 }
+
+/** 按品类统计消费：包含所有品类，无消费记录的品类统计值为 0。 */
+export interface CategoryConsumptionStatistic {
+  categoryId: number;
+  consumptionCount: number;
+  totalConsumptionAmountCents: number;
+  totalDurationMinutes: number;
+}
+
+interface CategoryConsumptionStatisticRow {
+  category_id: number;
+  consumption_count: number;
+  total_consumption_amount_cents: number;
+  total_duration_minutes: number;
+}
+
+/** 品类名由接口层按 `categoryId` 关联补齐，存储层类型不包含品类名。 */
+export function getCategoryConsumptionStatistics(
+  database: BetterSqlite3.Database,
+): CategoryConsumptionStatistic[] {
+  const rows = database
+    .prepare(
+      `SELECT c.category_id AS category_id,
+              COUNT(r.consumption_id) AS consumption_count,
+              COALESCE(SUM(r.consumption_amount_cents), 0) AS total_consumption_amount_cents,
+              COALESCE(SUM(r.duration_minutes), 0) AS total_duration_minutes
+       FROM craft_category c
+       LEFT JOIN consumption_record r ON r.category_id = c.category_id
+       GROUP BY c.category_id
+       ORDER BY total_consumption_amount_cents DESC, c.category_id ASC`,
+    )
+    .all() as CategoryConsumptionStatisticRow[];
+  return rows.map((row) => ({
+    categoryId: row.category_id,
+    consumptionCount: row.consumption_count,
+    totalConsumptionAmountCents: row.total_consumption_amount_cents,
+    totalDurationMinutes: row.total_duration_minutes,
+  }));
+}

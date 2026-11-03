@@ -34,11 +34,8 @@ export interface ConsumptionTransactionResult {
   consumptionRecord: ConsumptionRecord;
 }
 
-const RECHARGE_PLATFORMS: readonly RechargePlatform[] = new Set([
-  '微信',
-  '支付宝',
-  '现金',
-]);
+const RECHARGE_PLATFORMS: ReadonlySet<RechargePlatform> =
+  new Set<RechargePlatform>(['微信', '支付宝', '现金']);
 
 function validateRechargeInput(input: CreateRechargeInput): void {
   assertPositiveInteger(input.customerId, '客户 ID');

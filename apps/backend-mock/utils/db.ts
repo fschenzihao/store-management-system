@@ -8,7 +8,8 @@ import Database from 'better-sqlite3';
  * SQLite 连接配置
  *
  * - 数据库文件默认位于 `apps/backend-mock/data/store.db`，可通过 `DATABASE_PATH` 覆盖
- * - 相对路径按运行目录（apps/backend-mock）解析
+ * - 相对路径按运行目录解析；Nitro 服务（含 vite dev 的 mock 插件）由
+ *   `nitro.config.ts` 将 `DATABASE_PATH` 规范化为包根绝对路径，不依赖启动进程 cwd
  * - 每个连接显式启用外键约束，严格表要求 SQLite 3.37+
  */
 
