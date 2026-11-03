@@ -5,16 +5,21 @@
   "private": true,
   "license": "MIT",
   "author": "",
+  "type": "module",
   "scripts": {
     "build": "nitro build",
+    "db:migrate": "node db/migrate.ts",
+    "db:seed": "node db/seed.ts",
     "start": "nitro dev"
   },
   "dependencies": {
     "@faker-js/faker": "catalog:",
+    "better-sqlite3": "catalog:",
     "jsonwebtoken": "catalog:",
     "nitropack": "catalog:"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "catalog:",
     "@types/jsonwebtoken": "catalog:",
     "h3": "catalog:"
   }

@@ -66,6 +66,19 @@ const overrides: OxlintConfig = {
       },
     },
     {
+      // 后端模拟代码与数据库 CLI 脚本需要直接输出执行信息
+      files: [
+        'apps/backend-mock/**/*.js',
+        'apps/backend-mock/**/*.cjs',
+        'apps/backend-mock/**/*.mjs',
+        'apps/backend-mock/**/*.ts',
+        'apps/backend-mock/**/*.mts',
+      ],
+      rules: {
+        'no-console': 'off',
+      },
+    },
+    {
       files: ['packages/@core/base/shared/src/utils/inference.ts'],
       rules: {
         'vue/prefer-import-from-vue': 'off',

@@ -38,6 +38,8 @@
     "check:type": "turbo run typecheck",
     "clean": "node ./scripts/clean.mjs",
     "commit": "czg",
+    "db:migrate": "pnpm -F @vben/backend-mock run db:migrate",
+    "db:seed": "pnpm -F @vben/backend-mock run db:seed",
     "dev": "turbo-run dev",
     "dev:ele": "pnpm -F @vben/web-ele run dev",
     "format": "vsh lint --format",
