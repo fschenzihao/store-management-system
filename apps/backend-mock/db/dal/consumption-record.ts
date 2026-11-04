@@ -6,6 +6,10 @@ export interface ConsumptionRecord {
   consumptionId: number;
   customerId: number;
   durationMinutes: number;
+  /** 是否全天：1=全天、0=否，null 表示未指定。 */
+  isFullDay: null | number;
+  /** 桌号，null 表示未指定。 */
+  tableNumber: null | number;
 }
 
 export interface CreateConsumptionInput {
@@ -13,6 +17,10 @@ export interface CreateConsumptionInput {
   consumptionAmountCents: number;
   customerId: number;
   durationMinutes: number;
+  /** 可选是否全天标记，缺省或 null 时落库为 NULL。 */
+  isFullDay?: null | number;
+  /** 可选桌号，缺省或 null 时落库为 NULL。 */
+  tableNumber?: null | number;
 }
 
 interface ConsumptionRecordRow {
@@ -21,6 +29,8 @@ interface ConsumptionRecordRow {
   consumption_id: number;
   customer_id: number;
   duration_minutes: number;
+  is_full_day: null | number;
+  table_number: null | number;
 }
 
 function mapConsumptionRecord(row: ConsumptionRecordRow): ConsumptionRecord {
@@ -30,6 +40,8 @@ function mapConsumptionRecord(row: ConsumptionRecordRow): ConsumptionRecord {
     consumptionId: row.consumption_id,
     customerId: row.customer_id,
     durationMinutes: row.duration_minutes,
+    isFullDay: row.is_full_day,
+    tableNumber: row.table_number,
   };
 }
 
@@ -57,6 +69,38 @@ export function listConsumptionRecordsByCustomer(
   return rows.map((row) => mapConsumptionRecord(row));
 }
 
+export interface ListConsumptionRecordsFilters {
+  categoryId?: number;
+  customerId?: number;
+}
+
+/** 全局消费记录列表：按可选 customerId / categoryId 过滤，新流水在前。 */
+export function listConsumptionRecords(
+  database: BetterSqlite3.Database,
+  filters: ListConsumptionRecordsFilters = {},
+): ConsumptionRecord[] {
+  const conditions: string[] = [];
+  const params: number[] = [];
+  if (filters.customerId !== undefined) {
+    conditions.push('customer_id = ?');
+    params.push(filters.customerId);
+  }
+  if (filters.categoryId !== undefined) {
+    conditions.push('category_id = ?');
+    params.push(filters.categoryId);
+  }
+  const where =
+    conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const rows = database
+    .prepare(
+      `SELECT * FROM consumption_record
+       ${where}
+       ORDER BY consumption_id DESC`,
+    )
+    .all(...params) as ConsumptionRecordRow[];
+  return rows.map((row) => mapConsumptionRecord(row));
+}
+
 export function listConsumptionRecordsByCategory(
   database: BetterSqlite3.Database,
   categoryId: number,
@@ -79,14 +123,16 @@ export function insertConsumptionRecord(
   const result = database
     .prepare(
       `INSERT INTO consumption_record
-        (customer_id, category_id, duration_minutes, consumption_amount_cents)
-       VALUES (?, ?, ?, ?)`,
+        (customer_id, category_id, duration_minutes, consumption_amount_cents, table_number, is_full_day)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.customerId,
       input.categoryId,
       input.durationMinutes,
       input.consumptionAmountCents,
+      input.tableNumber ?? null,
+      input.isFullDay ?? null,
     );
   const record = getConsumptionRecord(database, Number(result.lastInsertRowid));
   if (!record) {

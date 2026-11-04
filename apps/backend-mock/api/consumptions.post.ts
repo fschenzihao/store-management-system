@@ -3,6 +3,7 @@ import { getDatabase } from '~/utils/db.ts';
 import {
   defineStoreEventHandler,
   getCategoryName,
+  optionalNumberField,
   readJsonBody,
   requireCustomer,
   requireNumberField,
@@ -17,6 +18,8 @@ export default defineStoreEventHandler(async (event) => {
     consumptionAmountCents: requireNumberField(body, 'consumptionAmountCents'),
     customerId: requireNumberField(body, 'customerId'),
     durationMinutes: requireNumberField(body, 'durationMinutes'),
+    isFullDay: optionalNumberField(body, 'isFullDay'),
+    tableNumber: optionalNumberField(body, 'tableNumber'),
   });
   const customerName = requireCustomer(
     database,
