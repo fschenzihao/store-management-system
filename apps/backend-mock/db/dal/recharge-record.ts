@@ -58,6 +58,63 @@ export function listRechargeRecordsByCustomer(
   return rows.map((row) => mapRechargeRecord(row));
 }
 
+export interface RechargeRecordFilter {
+  customerId?: number;
+  /** UTC 文本时间（YYYY-MM-DD HH:MM:SS），闭区间上界。 */
+  endTime?: string;
+  platform?: RechargePlatform;
+  /** UTC 文本时间（YYYY-MM-DD HH:MM:SS），闭区间下界。 */
+  startTime?: string;
+}
+
+export interface RechargeRecordWithCustomer extends RechargeRecord {
+  customerName: string;
+}
+
+interface RechargeRecordWithCustomerRow extends RechargeRecordRow {
+  customer_name: string;
+}
+
+/** 全局充值流水列表，可按客户、平台、UTC 时间范围过滤，按时间倒序。 */
+export function listRechargeRecords(
+  database: BetterSqlite3.Database,
+  filter: RechargeRecordFilter = {},
+): RechargeRecordWithCustomer[] {
+  const conditions: string[] = [];
+  const params: (number | string)[] = [];
+  if (filter.customerId !== undefined) {
+    conditions.push('r.customer_id = ?');
+    params.push(filter.customerId);
+  }
+  if (filter.platform !== undefined) {
+    conditions.push('r.platform = ?');
+    params.push(filter.platform);
+  }
+  if (filter.startTime !== undefined) {
+    conditions.push('r.recharge_time >= ?');
+    params.push(filter.startTime);
+  }
+  if (filter.endTime !== undefined) {
+    conditions.push('r.recharge_time <= ?');
+    params.push(filter.endTime);
+  }
+  const where =
+    conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const rows = database
+    .prepare(
+      `SELECT r.*, c.customer_name
+       FROM recharge_record r
+       JOIN customer c ON c.customer_id = r.customer_id
+       ${where}
+       ORDER BY r.recharge_time DESC, r.recharge_id DESC`,
+    )
+    .all(...params) as RechargeRecordWithCustomerRow[];
+  return rows.map((row) => ({
+    ...mapRechargeRecord(row),
+    customerName: row.customer_name,
+  }));
+}
+
 /** 仅供充值事务调用，业务入口不得单独写入充值流水。 */
 export function insertRechargeRecord(
   database: BetterSqlite3.Database,

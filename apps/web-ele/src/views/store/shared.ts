@@ -33,6 +33,15 @@ export function displayText(value: null | string | undefined): string {
   return value || '-';
 }
 
+/** 本地时间 Date → 服务端 UTC 文本（YYYY-MM-DD HH:MM:SS），用于时间范围过滤参数 */
+export function formatDateToUtcText(date: Date): string {
+  const pad = (part: number) => `${part}`.padStart(2, '0');
+  return [
+    `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`,
+    `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`,
+  ].join(' ');
+}
+
 /** 分页默认值与可选项，pageSize 上限与接口契约的 1 ~ 100 一致 */
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_PAGE_SIZE = 20;

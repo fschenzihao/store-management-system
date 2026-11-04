@@ -81,6 +81,14 @@ export interface RechargeTransactionResult {
   rechargeRecord: RechargeRecord;
 }
 
+/** 充值记录列表查询参数；时间范围为 UTC 文本（YYYY-MM-DD HH:MM:SS），闭区间。 */
+export interface RechargeListParams extends PageParams {
+  customerId?: number;
+  endTime?: string;
+  platform?: RechargePlatform;
+  startTime?: string;
+}
+
 /** 消费记录。 */
 export interface ConsumptionRecord {
   categoryId: number;

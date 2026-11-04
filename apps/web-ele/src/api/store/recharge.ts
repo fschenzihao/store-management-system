@@ -2,11 +2,21 @@ import type {
   CreateRechargeParams,
   PageParams,
   PageResult,
+  RechargeListParams,
   RechargeRecord,
   RechargeTransactionResult,
 } from './types';
 
 import { requestClient } from '#/api/request';
+
+/**
+ * 充值记录列表，可按客户、平台、UTC 时间范围过滤
+ */
+export async function getRechargeListApi(params?: RechargeListParams) {
+  return requestClient.get<PageResult<RechargeRecord>>('/recharges', {
+    params,
+  });
+}
 
 /**
  * 客户充值记录列表
