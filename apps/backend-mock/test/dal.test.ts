@@ -5,10 +5,13 @@ import type BetterSqlite3 from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  CATEGORY_STATUS_OFF,
+  CATEGORY_STATUS_ON,
   createCraftCategory,
   deleteCraftCategory,
   getCraftCategory,
   listCraftCategories,
+  setCraftCategoryStatus,
   updateCraftCategory,
 } from '../db/dal/craft-category.ts';
 import { getCustomerAccount } from '../db/dal/customer-account.ts';
@@ -46,6 +49,44 @@ describe('数据访问层', () => {
 
     deleteCraftCategory(database, created.categoryId);
     expect(getCraftCategory(database, created.categoryId)).toBeNull();
+  });
+
+  it('品类默认上架，支持备注、状态切换与按状态过滤', () => {
+    const created = createCraftCategory(database, {
+      categoryName: '拼豆钥匙扣',
+      remark: ' 热门项目 ',
+    });
+    expect(created.status).toBe(CATEGORY_STATUS_ON);
+    expect(created.remark).toBe('热门项目');
+    expect(created.updateTime).toMatch(UTC_TIME_PATTERN);
+
+    const offShelf = setCraftCategoryStatus(
+      database,
+      created.categoryId,
+      CATEGORY_STATUS_OFF,
+    );
+    expect(offShelf.status).toBe(CATEGORY_STATUS_OFF);
+    expect(offShelf.remark).toBe('热门项目');
+    expect(
+      listCraftCategories(database, { status: CATEGORY_STATUS_OFF }),
+    ).toHaveLength(1);
+    expect(
+      listCraftCategories(database, { status: CATEGORY_STATUS_ON }),
+    ).toHaveLength(0);
+
+    const updated = updateCraftCategory(database, created.categoryId, {
+      categoryName: '拼豆钥匙扣',
+      remark: null,
+      status: CATEGORY_STATUS_ON,
+    });
+    expect(updated.remark).toBeNull();
+    expect(updated.status).toBe(CATEGORY_STATUS_ON);
+    expect(() =>
+      updateCraftCategory(database, created.categoryId, {
+        categoryName: '拼豆钥匙扣',
+        remark: '超'.repeat(501),
+      }),
+    ).toThrow('备注长度不能超过 500 个字符');
   });
 
   it('客户建档时同步创建零余额账户，并支持资料更新', () => {

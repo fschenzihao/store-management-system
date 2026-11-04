@@ -1,4 +1,11 @@
-import type { CategoryListParams, CraftCategory, PageResult } from './types';
+import type {
+  CategoryListParams,
+  CraftCategory,
+  CraftCategoryStatus,
+  CreateCategoryParams,
+  PageResult,
+  UpdateCategoryParams,
+} from './types';
 
 import { requestClient } from '#/api/request';
 
@@ -14,7 +21,7 @@ export async function getCategoryListApi(params: CategoryListParams) {
 /**
  * 新增手工品类
  */
-export async function createCategoryApi(data: { categoryName: string }) {
+export async function createCategoryApi(data: CreateCategoryParams) {
   return requestClient.post<CraftCategory>('/categories', data);
 }
 
@@ -23,9 +30,21 @@ export async function createCategoryApi(data: { categoryName: string }) {
  */
 export async function updateCategoryApi(
   categoryId: number,
-  data: { categoryName: string },
+  data: UpdateCategoryParams,
 ) {
   return requestClient.put<CraftCategory>(`/categories/${categoryId}`, data);
+}
+
+/**
+ * 切换手工品类上架/下架状态
+ */
+export async function updateCategoryStatusApi(
+  categoryId: number,
+  status: CraftCategoryStatus,
+) {
+  return requestClient.put<CraftCategory>(`/categories/${categoryId}/status`, {
+    status,
+  });
 }
 
 /**

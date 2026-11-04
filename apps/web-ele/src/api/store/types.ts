@@ -13,11 +13,31 @@ export interface PageParams {
   pageSize?: number;
 }
 
+/** 品类状态数字枚举：1=上架、2=下架，与数据库 CHECK 约束保持一致。 */
+export const CATEGORY_STATUS_OFF = 2;
+export const CATEGORY_STATUS_ON = 1;
+
+export type CraftCategoryStatus =
+  | typeof CATEGORY_STATUS_OFF
+  | typeof CATEGORY_STATUS_ON;
+
+/** 品类状态展示映射：label 集中定义，后续接入 i18n 时仅需替换此处。 */
+export const CATEGORY_STATUS_META: Record<
+  CraftCategoryStatus,
+  { label: string; tag: 'danger' | 'info' | 'primary' | 'success' | 'warning' }
+> = {
+  [CATEGORY_STATUS_ON]: { label: '上架', tag: 'success' },
+  [CATEGORY_STATUS_OFF]: { label: '下架', tag: 'info' },
+};
+
 /** 手工品类。 */
 export interface CraftCategory {
   categoryId: number;
   categoryName: string;
   createTime: string;
+  remark: null | string;
+  status: CraftCategoryStatus;
+  updateTime: string;
 }
 
 /** 客户账户，customerName 由服务端关联补齐。 */
@@ -90,6 +110,21 @@ export interface CategoryConsumptionStatistic {
 /** 品类列表查询参数。 */
 export interface CategoryListParams extends PageParams {
   categoryName?: string;
+  status?: CraftCategoryStatus;
+}
+
+/** 新增品类参数；status 缺省时服务端默认上架。 */
+export interface CreateCategoryParams {
+  categoryName: string;
+  remark?: null | string;
+  status?: CraftCategoryStatus;
+}
+
+/** 修改品类参数；remark 传 null 或空字符串表示清空备注。 */
+export interface UpdateCategoryParams {
+  categoryName: string;
+  remark?: null | string;
+  status?: CraftCategoryStatus;
 }
 
 /** 客户列表查询参数。 */

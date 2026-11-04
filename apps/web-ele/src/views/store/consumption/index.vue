@@ -25,6 +25,7 @@ import {
 } from 'element-plus';
 
 import {
+  CATEGORY_STATUS_ON,
   createConsumptionApi,
   getCategoryListApi,
   getCategoryStatisticsApi,
@@ -111,6 +112,8 @@ async function loadCategories() {
     const result = await getCategoryListApi({
       page: DEFAULT_PAGE,
       pageSize: MAX_OPTIONS,
+      // 下架品类不可用于新增消费，下拉仅展示上架品类
+      status: CATEGORY_STATUS_ON,
     });
     categories.value = result.items;
   } catch {

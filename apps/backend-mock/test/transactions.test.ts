@@ -9,8 +9,10 @@ import {
   listConsumptionRecordsByCustomer,
 } from '../db/dal/consumption-record.ts';
 import {
+  CATEGORY_STATUS_OFF,
   createCraftCategory,
   deleteCraftCategory,
+  setCraftCategoryStatus,
 } from '../db/dal/craft-category.ts';
 import { getCustomerAccount } from '../db/dal/customer-account.ts';
 import { createCustomer } from '../db/dal/customer.ts';
@@ -191,6 +193,30 @@ describe('充值与消费事务', () => {
       0,
     );
     expect(getCustomerAccount(database, customerId)?.balanceCents).toBe(2000);
+  });
+
+  it('下架品类不可用于新增消费，余额与流水保持不变', () => {
+    createRecharge(database, {
+      amountCents: 1000,
+      customerId,
+      platform: '微信',
+    });
+    setCraftCategoryStatus(database, categoryId, CATEGORY_STATUS_OFF);
+
+    const error = captureError(() =>
+      createConsumption(database, {
+        categoryId,
+        consumptionAmountCents: 500,
+        customerId,
+        durationMinutes: 30,
+      }),
+    );
+    expect(error).toBeInstanceOf(BusinessError);
+    expect(error).toMatchObject({ code: 'CATEGORY_OFF_SHELF' });
+    expect(getCustomerAccount(database, customerId)?.balanceCents).toBe(1000);
+    expect(listConsumptionRecordsByCustomer(database, customerId)).toHaveLength(
+      0,
+    );
   });
 
   it('已有消费记录的手工品类不能删除', () => {

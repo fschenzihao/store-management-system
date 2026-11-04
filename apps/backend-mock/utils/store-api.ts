@@ -181,6 +181,21 @@ export function optionalTextField(
   return value;
 }
 
+/** 读取可选数字字段：undefined 表示未提供，取值范围校验由数据访问层负责。 */
+export function optionalNumberField(
+  body: Record<string, unknown>,
+  field: string,
+): number | undefined {
+  const value = body[field];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'number') {
+    throw new BusinessError('INVALID_INPUT', `${field} 必须为数字`);
+  }
+  return value;
+}
+
 /** 对过滤后的完整列表做内存分页。 */
 export function paginate<T>(
   items: T[],

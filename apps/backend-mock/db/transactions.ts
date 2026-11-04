@@ -12,7 +12,7 @@ import type {
 } from './dal/recharge-record.ts';
 
 import { insertConsumptionRecord } from './dal/consumption-record.ts';
-import { getCraftCategory } from './dal/craft-category.ts';
+import { CATEGORY_STATUS_ON, getCraftCategory } from './dal/craft-category.ts';
 import { getCustomerAccount } from './dal/customer-account.ts';
 import { getCustomer } from './dal/customer.ts';
 import { insertRechargeRecord } from './dal/recharge-record.ts';
@@ -156,10 +156,18 @@ export function createConsumption(
     return database
       .transaction(() => {
         requireCustomer(database, input.customerId);
-        if (!getCraftCategory(database, input.categoryId)) {
+        const category = getCraftCategory(database, input.categoryId);
+        if (!category) {
           throw new BusinessError(
             'CATEGORY_NOT_FOUND',
             `手工品类不存在（ID: ${input.categoryId}）`,
+          );
+        }
+        // 下架品类不可用于新增消费，历史消费记录不受影响
+        if (category.status !== CATEGORY_STATUS_ON) {
+          throw new BusinessError(
+            'CATEGORY_OFF_SHELF',
+            `手工品类已下架，不能用于新增消费（ID: ${input.categoryId}）`,
           );
         }
         const account = requireAccount(database, input.customerId);

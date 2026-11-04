@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus';
 
-import type { CraftCategory } from '#/api/store';
+import type { CraftCategory, CraftCategoryStatus } from '#/api/store';
 
-import { nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 
 import {
   ElButton,
@@ -14,21 +14,29 @@ import {
   ElInput,
   ElMessage,
   ElMessageBox,
+  ElOption,
   ElPagination,
+  ElSelect,
   ElTable,
   ElTableColumn,
+  ElTag,
 } from 'element-plus';
 
 import {
+  CATEGORY_STATUS_META,
+  CATEGORY_STATUS_OFF,
+  CATEGORY_STATUS_ON,
   createCategoryApi,
   deleteCategoryApi,
   getCategoryListApi,
   updateCategoryApi,
+  updateCategoryStatusApi,
 } from '#/api/store';
 
 import {
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
+  displayText,
   formatUtcDateTime,
   PAGE_SIZES,
 } from '../shared';
@@ -37,10 +45,16 @@ defineOptions({ name: 'StoreCategory' });
 
 interface CategoryForm {
   categoryName: string;
+  remark: string;
+  status: CraftCategoryStatus;
 }
 
 const query = reactive({ categoryName: '' });
-const form = reactive<CategoryForm>({ categoryName: '' });
+const form = reactive<CategoryForm>({
+  categoryName: '',
+  remark: '',
+  status: CATEGORY_STATUS_ON,
+});
 const formRef = ref<FormInstance>();
 const rules: FormRules = {
   categoryName: [
@@ -57,7 +71,15 @@ const rules: FormRules = {
       },
     },
   ],
+  remark: [{ max: 500, message: '备注不能超过 500 个字符', trigger: 'blur' }],
 };
+
+const statusOptions = computed(() =>
+  Object.entries(CATEGORY_STATUS_META).map(([value, meta]) => ({
+    label: meta.label,
+    value: Number(value) as CraftCategoryStatus,
+  })),
+);
 
 const items = ref<CraftCategory[]>([]);
 const total = ref(0);
@@ -111,6 +133,8 @@ function handleCurrentChange(value: number) {
 function openCreate() {
   editingId.value = null;
   form.categoryName = '';
+  form.remark = '';
+  form.status = CATEGORY_STATUS_ON;
   dialogVisible.value = true;
   nextTick(() => formRef.value?.clearValidate());
 }
@@ -118,6 +142,8 @@ function openCreate() {
 function openEdit(row: CraftCategory) {
   editingId.value = row.categoryId;
   form.categoryName = row.categoryName;
+  form.remark = row.remark ?? '';
+  form.status = row.status;
   dialogVisible.value = true;
   nextTick(() => formRef.value?.clearValidate());
 }
@@ -131,11 +157,17 @@ async function submitForm() {
   submitting.value = true;
   try {
     const categoryName = form.categoryName.trim();
+    const remark = form.remark.trim() || null;
+    const status = form.status;
     if (editingId.value === null) {
-      await createCategoryApi({ categoryName });
+      await createCategoryApi({ categoryName, remark, status });
       ElMessage.success('新增品类成功');
     } else {
-      await updateCategoryApi(editingId.value, { categoryName });
+      await updateCategoryApi(editingId.value, {
+        categoryName,
+        remark,
+        status,
+      });
       ElMessage.success('修改品类成功');
     }
     dialogVisible.value = false;
@@ -145,6 +177,38 @@ async function submitForm() {
     // 错误提示由 request.ts 统一处理，保留弹窗与表单内容供用户修改
   } finally {
     submitting.value = false;
+  }
+}
+
+async function toggleCategoryStatus(row: CraftCategory) {
+  const nextStatus: CraftCategoryStatus =
+    row.status === CATEGORY_STATUS_ON
+      ? CATEGORY_STATUS_OFF
+      : CATEGORY_STATUS_ON;
+  const action = CATEGORY_STATUS_META[nextStatus].label;
+  try {
+    await ElMessageBox.confirm(
+      `确认将品类「${row.categoryName}」${action}吗？${
+        nextStatus === CATEGORY_STATUS_OFF
+          ? '下架后的品类不可用于新增消费。'
+          : ''
+      }`,
+      `${action}确认`,
+      {
+        cancelButtonText: '取消',
+        confirmButtonText: '确定',
+        type: 'warning',
+      },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await updateCategoryStatusApi(row.categoryId, nextStatus);
+    ElMessage.success(`${action}成功`);
+    await loadCategories();
+  } catch {
+    // 状态切换失败时统一提示，不重复发起请求
   }
 }
 
@@ -201,13 +265,38 @@ onMounted(loadCategories);
 
       <ElTable v-loading="loading" :data="items" border stripe>
         <ElTableColumn label="品类 ID" prop="categoryId" width="100" />
-        <ElTableColumn label="品类名" prop="categoryName" min-width="180" />
-        <ElTableColumn label="创建时间" min-width="180">
+        <ElTableColumn label="品类名" prop="categoryName" min-width="160" />
+        <ElTableColumn label="状态" width="90">
+          <template #default="{ row }">
+            <ElTag
+              :type="
+                CATEGORY_STATUS_META[row.status as CraftCategoryStatus]?.tag ??
+                'info'
+              "
+            >
+              {{
+                CATEGORY_STATUS_META[row.status as CraftCategoryStatus]
+                  ?.label ?? '-'
+              }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="备注" min-width="140" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ displayText((row as CraftCategory).remark) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="创建时间" min-width="160">
           <template #default="{ row }">
             {{ formatUtcDateTime(row.createTime) }}
           </template>
         </ElTableColumn>
-        <ElTableColumn fixed="right" label="操作" width="150">
+        <ElTableColumn label="修改时间" min-width="160">
+          <template #default="{ row }">
+            {{ formatUtcDateTime((row as CraftCategory).updateTime) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn fixed="right" label="操作" width="190">
           <template #default="{ row }">
             <ElButton
               link
@@ -215,6 +304,13 @@ onMounted(loadCategories);
               @click="openEdit(row as CraftCategory)"
             >
               修改
+            </ElButton>
+            <ElButton
+              link
+              :type="row.status === CATEGORY_STATUS_ON ? 'warning' : 'success'"
+              @click="toggleCategoryStatus(row as CraftCategory)"
+            >
+              {{ row.status === CATEGORY_STATUS_ON ? '下架' : '上架' }}
             </ElButton>
             <ElButton
               link
@@ -253,6 +349,26 @@ onMounted(loadCategories);
             maxlength="50"
             placeholder="请输入品类名"
             show-word-limit
+          />
+        </ElFormItem>
+        <ElFormItem label="状态" prop="status">
+          <ElSelect v-model="form.status" style="width: 100%">
+            <ElOption
+              v-for="option in statusOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="备注" prop="remark">
+          <ElInput
+            v-model="form.remark"
+            :rows="3"
+            maxlength="500"
+            placeholder="请输入品类备注（选填）"
+            show-word-limit
+            type="textarea"
           />
         </ElFormItem>
       </ElForm>
