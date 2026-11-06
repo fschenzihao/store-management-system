@@ -53,6 +53,19 @@ function validateConsumptionInput(input: CreateConsumptionInput): void {
   assertPositiveInteger(input.categoryId, '手工品类 ID');
   assertNonNegativeInteger(input.durationMinutes, '消费时长（分钟）');
   assertNonNegativeInteger(input.consumptionAmountCents, '消费金额（分）');
+  // 桌号为可选字段：null/undefined 表示未指定，提供时必须为正整数
+  if (input.tableNumber !== undefined && input.tableNumber !== null) {
+    assertPositiveInteger(input.tableNumber, '桌号');
+  }
+  // 是否全天为可选字段：null/undefined 表示未指定，提供时只能是 0 或 1
+  if (
+    input.isFullDay !== undefined &&
+    input.isFullDay !== null &&
+    input.isFullDay !== 0 &&
+    input.isFullDay !== 1
+  ) {
+    throw new BusinessError('INVALID_INPUT', '是否全天只能是 0 或 1');
+  }
 }
 
 function requireCustomer(

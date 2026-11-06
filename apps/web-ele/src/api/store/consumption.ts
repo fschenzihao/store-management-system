@@ -1,5 +1,6 @@
 import type {
   CategoryConsumptionStatistic,
+  ConsumptionListParams,
   ConsumptionRecord,
   ConsumptionTransactionResult,
   CreateConsumptionParams,
@@ -8,6 +9,15 @@ import type {
 } from './types';
 
 import { requestClient } from '#/api/request';
+
+/**
+ * 全局消费记录分页列表，可按客户、手工品类过滤
+ */
+export async function getConsumptionListApi(params?: ConsumptionListParams) {
+  return requestClient.get<PageResult<ConsumptionRecord>>('/consumptions', {
+    params,
+  });
+}
 
 /**
  * 客户消费记录列表

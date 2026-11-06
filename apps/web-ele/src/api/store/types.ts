@@ -100,6 +100,16 @@ export interface ConsumptionRecord {
   durationMinutes: number;
   /** 关联的开台会话；手工录入的历史消费记录为 null */
   sessionId: null | number;
+  /** 是否全天：1=全天、0=否，null 表示未指定。 */
+  isFullDay: null | number;
+  /** 桌号，null 表示未指定。 */
+  tableNumber: null | number;
+}
+
+/** 消费记录列表查询参数；字段均缺省时查询全部记录。 */
+export interface ConsumptionListParams extends PageParams {
+  categoryId?: number;
+  customerId?: number;
 }
 
 /** 新增消费结果，余额为事务提交后的最新值。 */
@@ -174,6 +184,10 @@ export interface CreateConsumptionParams {
   consumptionAmountCents: number;
   customerId: number;
   durationMinutes: number;
+  /** 可选是否全天标记，缺省或 null 时服务端落 NULL。 */
+  isFullDay?: null | number;
+  /** 可选桌号，缺省或 null 时服务端落 NULL。 */
+  tableNumber?: null | number;
 }
 
 /** 桌位看板：座位进行中的会话。 */
