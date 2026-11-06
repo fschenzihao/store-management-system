@@ -31,7 +31,7 @@ interface MigrationFile {
 }
 
 function readMigrationFiles(): MigrationFile[] {
-  return readdirSync(MIGRATIONS_DIR)
+  const migrations = readdirSync(MIGRATIONS_DIR)
     .filter((fileName) => fileName.endsWith('.sql'))
     .toSorted((a, b) => a.localeCompare(b))
     .map((fileName) => {
@@ -48,6 +48,18 @@ function readMigrationFiles(): MigrationFile[] {
         version: groups.version,
       };
     });
+
+  // 版本号必须唯一：重复版本会导致同名版本中仅第一个文件被执行，其余被静默跳过
+  const duplicateVersions = migrations
+    .map((migration) => migration.version)
+    .filter((version, index, versions) => versions.indexOf(version) !== index);
+  if (duplicateVersions.length > 0) {
+    throw new Error(
+      `迁移版本号重复：${[...new Set(duplicateVersions)].join(', ')}，请修正迁移文件名的版本号后再执行`,
+    );
+  }
+
+  return migrations;
 }
 
 function tableExists(
