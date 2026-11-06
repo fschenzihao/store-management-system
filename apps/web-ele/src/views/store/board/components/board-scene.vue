@@ -144,7 +144,7 @@ const gridLines = computed(() => {
             class="board-scene__sign"
             fill="var(--board-sign)"
           >
-            {{ barSign.label }} · 拼豆手作
+            {{ barSign.label }} · 拼豆
           </text>
         </g>
 
@@ -201,116 +201,6 @@ const gridLines = computed(() => {
             fill="var(--board-bead-2)"
           />
         </g>
-
-        <!-- 黑色冰箱 -->
-        <g>
-          <rect
-            x="1100"
-            y="25"
-            width="80"
-            height="95"
-            rx="6"
-            fill="var(--board-fridge)"
-          />
-          <rect
-            x="1107"
-            y="32"
-            width="66"
-            height="81"
-            rx="4"
-            fill="var(--board-fridge-glass)"
-          />
-          <line
-            x1="1107"
-            y1="66"
-            x2="1173"
-            y2="66"
-            stroke="var(--board-fridge)"
-            stroke-width="2"
-          />
-          <rect
-            x="1182"
-            y="58"
-            width="4"
-            height="20"
-            rx="2"
-            fill="var(--board-fridge)"
-          />
-        </g>
-
-        <!-- 落地玻璃门（右侧） -->
-        <g>
-          <rect
-            x="1176"
-            y="120"
-            width="76"
-            height="230"
-            rx="6"
-            fill="var(--board-door)"
-          />
-          <rect
-            x="1183"
-            y="128"
-            width="62"
-            height="214"
-            rx="4"
-            fill="var(--board-door-glass)"
-          />
-          <line
-            x1="1183"
-            y1="199"
-            x2="1245"
-            y2="199"
-            stroke="var(--board-door)"
-            stroke-width="2"
-          />
-          <line
-            x1="1183"
-            y1="270"
-            x2="1245"
-            y2="270"
-            stroke="var(--board-door)"
-            stroke-width="2"
-          />
-          <path
-            d="M1206 152 h14 m-5 -5 l5 5 l-5 5"
-            stroke="var(--board-door-arrow)"
-            stroke-width="2"
-            fill="none"
-            stroke-linecap="round"
-          />
-          <path
-            d="M1222 240 h-14 m5 -5 l-5 5 l5 5"
-            stroke="var(--board-door-arrow)"
-            stroke-width="2"
-            fill="none"
-            stroke-linecap="round"
-          />
-        </g>
-
-        <!-- 门口地垫 -->
-        <g>
-          <rect
-            x="660"
-            y="486"
-            width="76"
-            height="56"
-            rx="8"
-            fill="var(--board-mat)"
-          />
-          <rect
-            x="748"
-            y="486"
-            width="76"
-            height="56"
-            rx="8"
-            fill="var(--board-mat)"
-          />
-          <circle cx="684" cy="508" r="7" fill="var(--board-mat-item)" />
-          <circle cx="706" cy="522" r="7" fill="var(--board-mat-item)" />
-          <circle cx="772" cy="510" r="7" fill="var(--board-mat-item)" />
-          <circle cx="794" cy="524" r="7" fill="var(--board-mat-item)" />
-        </g>
       </svg>
 
       <!-- 桌面家具 -->
@@ -363,13 +253,6 @@ const gridLines = computed(() => {
   --board-bead-3: #e4572e;
   --board-shelf: #cfd4d6;
   --board-shelf-line: #a9b0b3;
-  --board-fridge: #2c2c2e;
-  --board-fridge-glass: #4a4d52;
-  --board-door: #3b342c;
-  --board-door-glass: rgb(168 196 198 / 50%);
-  --board-door-arrow: #4f9a9e;
-  --board-mat: #d8d4cd;
-  --board-mat-item: #a8a29a;
   --board-wood: linear-gradient(135deg, #c98d5a, #a96f42 60%, #8f5a34);
   --board-wood-border: rgb(255 255 255 / 35%);
 
@@ -450,8 +333,10 @@ const gridLines = computed(() => {
   position: absolute;
   inset: 0;
   background: var(--board-wood);
+  background-repeat: no-repeat;
+  background-size: 270px 164px;
   border: 1px solid var(--board-wood-border);
-  border-radius: 10px;
+  border-radius: 10px 10px 10px 0;
   box-shadow:
     0 14px 24px rgb(70 50 24 / 24%),
     inset 0 1px 0 rgb(255 255 255 / 55%);
@@ -459,14 +344,18 @@ const gridLines = computed(() => {
 
 .prop-desk__return {
   position: absolute;
-  top: 84px;
+  top: 83px;
   left: 0;
   width: 72px;
-  height: 80px;
+  height: 81px;
   background: var(--board-wood);
+  background-repeat: no-repeat;
+  background-position: 0 -82px;
+  background-size: 270px 164px;
   border: 1px solid var(--board-wood-border);
+  border-top: 0;
   border-radius: 0 0 10px 10px;
-  box-shadow: 0 14px 24px rgb(70 50 24 / 22%);
+  box-shadow: 0 12px 20px -8px rgb(70 50 24 / 30%);
 }
 
 .prop-desk__screen {
@@ -536,12 +425,6 @@ const gridLines = computed(() => {
   --board-sign: #e8c99a;
   --board-shelf: #4a4b4d;
   --board-shelf-line: #616467;
-  --board-fridge: #1a1a1b;
-  --board-fridge-glass: #2f3236;
-  --board-door: #1d1b19;
-  --board-door-glass: rgb(120 150 152 / 32%);
-  --board-mat: #3c3a37;
-  --board-mat-item: #6e6a64;
   --board-wood: linear-gradient(135deg, #8a5c38, #6f4628 60%, #5c3a20);
   --board-wood-border: rgb(255 255 255 / 12%);
 

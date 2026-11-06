@@ -147,14 +147,14 @@ const ariaLabel = computed(() => {
 
 .seat__board {
   position: absolute;
-  top: -18px;
-  left: -27px;
+  top: -14px;
+  left: -20px;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 3px;
-  width: 54px;
-  height: 36px;
-  padding: 4px;
+  gap: 2px;
+  width: 40px;
+  height: 28px;
+  padding: 3px;
   background: linear-gradient(155deg, #f6f4ee 0%, #d9d4c7 55%, #bdb7a8 100%);
   border-radius: 4px;
   box-shadow:

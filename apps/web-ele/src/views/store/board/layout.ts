@@ -9,7 +9,7 @@
 export const SCENE_WIDTH = 1260;
 export const SCENE_HEIGHT = 580;
 
-/** 桌面家具：上排三张四人桌 + 下排吧台长桌。 */
+/** 桌面家具：上排三张四人桌（各由 2 块 60×120 左右拼成 120×120）+ 下排吧台（3 块 120×60 横向排列，每块 2 个位置）。 */
 export interface TableProp {
   height: number;
   kind: 'bar' | 'island';
@@ -20,10 +20,15 @@ export interface TableProp {
 }
 
 export const TABLE_PROPS: TableProp[] = [
-  { height: 150, kind: 'island', label: 'A 桌', width: 180, x: 180, y: 150 },
-  { height: 150, kind: 'island', label: 'B 桌', width: 180, x: 480, y: 150 },
-  { height: 150, kind: 'island', label: 'C 桌', width: 180, x: 780, y: 150 },
-  { height: 72, kind: 'bar', label: '吧台', width: 500, x: 385, y: 440 },
+  { height: 120, kind: 'island', label: 'A 桌·左', width: 60, x: 150, y: 150 },
+  { height: 120, kind: 'island', label: 'A 桌·右', width: 60, x: 210, y: 150 },
+  { height: 120, kind: 'island', label: 'B 桌·左', width: 60, x: 450, y: 150 },
+  { height: 120, kind: 'island', label: 'B 桌·右', width: 60, x: 510, y: 150 },
+  { height: 120, kind: 'island', label: 'C 桌·左', width: 60, x: 750, y: 150 },
+  { height: 120, kind: 'island', label: 'C 桌·右', width: 60, x: 810, y: 150 },
+  { height: 60, kind: 'bar', label: '吧台·1', width: 120, x: 175, y: 440 },
+  { height: 60, kind: 'bar', label: '吧台·2', width: 120, x: 385, y: 440 },
+  { height: 60, kind: 'bar', label: '吧台·3', width: 120, x: 595, y: 440 },
 ];
 
 export interface SeatLayout {
@@ -51,56 +56,55 @@ const ISLAND_GROUPS: {
   { base: 15, group: 'C', x: 780, y: 150 },
 ];
 
-/** 四人桌的四个座位：左右两侧各两座，拼豆架摆上桌面，组成 2×2。 */
+/** 四人桌的四个座位：左右两侧各两座，拼豆架旋转 90° 与竖向桌面平行，组成 2×2。 */
 const ISLAND_SEAT_OFFSETS = [
   {
     badge: { x: 0, y: -54 },
-    board: { rotate: 0, x: 55, y: 3 },
+    board: { rotate: 90, x: 45, y: 3 },
     chair: { x: 0, y: 0 },
-    dx: -105,
+    dx: -75,
     dy: -33,
   },
   {
     badge: { x: 0, y: 54 },
-    board: { rotate: 0, x: 55, y: -3 },
+    board: { rotate: 90, x: 45, y: -3 },
     chair: { x: 0, y: 0 },
-    dx: -105,
+    dx: -75,
     dy: 33,
   },
   {
     badge: { x: 0, y: -54 },
-    board: { rotate: 0, x: -55, y: 3 },
+    board: { rotate: 90, x: -45, y: 3 },
     chair: { x: 0, y: 0 },
-    dx: 105,
+    dx: 75,
     dy: -33,
   },
   {
     badge: { x: 0, y: 54 },
-    board: { rotate: 0, x: -55, y: -3 },
+    board: { rotate: 90, x: -45, y: -3 },
     chair: { x: 0, y: 0 },
-    dx: 105,
+    dx: 75,
     dy: 33,
   },
 ];
 
-/** 吧台 6 个座位沿长桌一字排开，椅子在桌后（上方），徽标放座位下方。 */
-const BAR_SEATS: SeatLayout[] = [
-  { x: 160, y: 440 },
-  { x: 250, y: 440 },
-  { x: 340, y: 440 },
-  { x: 430, y: 440 },
-  { x: 520, y: 440 },
-  { x: 610, y: 440 },
-].map((seat, index) => ({
-  badge: { x: 0, y: 60 },
-  board: { rotate: 0, x: 0, y: 0 },
-  chair: { x: 0, y: -55 },
-  group: 'bar' as const,
-  label: `吧台 ${String(index + 1).padStart(2, '0')}`,
-  seatNo: index + 1,
-  x: seat.x,
-  y: seat.y,
-}));
+/**
+ * 吧台 3 张 120×60 桌块（中心间距 210，块间 90px），每张 2 个位置。
+ * 椅子与拼豆架在桌块内均匀分布（center ± 30，板边距桌沿 10px，与 A 桌一致）；
+ * 徽标各向外让 15px，仍保持 90px 间距，避免相邻徽标重叠。
+ */
+const BAR_SEATS: SeatLayout[] = [175, 385, 595].flatMap((center, tableIndex) =>
+  [-1, 1].map((side, sideIndex) => ({
+    badge: { x: side * 15, y: 54 },
+    board: { rotate: 0, x: 0, y: 0 },
+    chair: { x: 0, y: -50 },
+    group: 'bar' as const,
+    label: `吧台 ${String(tableIndex * 2 + sideIndex + 1).padStart(2, '0')}`,
+    seatNo: tableIndex * 2 + sideIndex + 1,
+    x: center + side * 30,
+    y: 440,
+  })),
+);
 
 const ISLAND_SEATS: SeatLayout[] = ISLAND_GROUPS.flatMap((table) =>
   ISLAND_SEAT_OFFSETS.map((offset, index) => ({
