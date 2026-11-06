@@ -7,6 +7,12 @@ const routes: RouteRecordRaw[] = [
     path: '/store',
     children: [
       {
+        name: 'StoreTableBoard',
+        path: 'board',
+        component: () => import('#/views/store/board/index.vue'),
+        meta: { icon: 'lucide:armchair', title: '桌位看板' },
+      },
+      {
         name: 'StoreCategory',
         path: 'category',
         component: () => import('#/views/store/category/index.vue'),

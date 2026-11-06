@@ -6,6 +6,8 @@ export interface ConsumptionRecord {
   consumptionId: number;
   customerId: number;
   durationMinutes: number;
+  /** 关联的开台会话；历史手工录入的消费记录为 null。 */
+  sessionId: null | number;
 }
 
 export interface CreateConsumptionInput {
@@ -13,6 +15,7 @@ export interface CreateConsumptionInput {
   consumptionAmountCents: number;
   customerId: number;
   durationMinutes: number;
+  sessionId?: null | number;
 }
 
 interface ConsumptionRecordRow {
@@ -21,6 +24,7 @@ interface ConsumptionRecordRow {
   consumption_id: number;
   customer_id: number;
   duration_minutes: number;
+  session_id: null | number;
 }
 
 function mapConsumptionRecord(row: ConsumptionRecordRow): ConsumptionRecord {
@@ -30,6 +34,7 @@ function mapConsumptionRecord(row: ConsumptionRecordRow): ConsumptionRecord {
     consumptionId: row.consumption_id,
     customerId: row.customer_id,
     durationMinutes: row.duration_minutes,
+    sessionId: row.session_id,
   };
 }
 
@@ -79,14 +84,15 @@ export function insertConsumptionRecord(
   const result = database
     .prepare(
       `INSERT INTO consumption_record
-        (customer_id, category_id, duration_minutes, consumption_amount_cents)
-       VALUES (?, ?, ?, ?)`,
+        (customer_id, category_id, duration_minutes, consumption_amount_cents, session_id)
+       VALUES (?, ?, ?, ?, ?)`,
     )
     .run(
       input.customerId,
       input.categoryId,
       input.durationMinutes,
       input.consumptionAmountCents,
+      input.sessionId ?? null,
     );
   const record = getConsumptionRecord(database, Number(result.lastInsertRowid));
   if (!record) {

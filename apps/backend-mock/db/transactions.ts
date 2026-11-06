@@ -154,38 +154,7 @@ export function createConsumption(
   validateConsumptionInput(input);
   try {
     return database
-      .transaction(() => {
-        requireCustomer(database, input.customerId);
-        const category = getCraftCategory(database, input.categoryId);
-        if (!category) {
-          throw new BusinessError(
-            'CATEGORY_NOT_FOUND',
-            `手工品类不存在（ID: ${input.categoryId}）`,
-          );
-        }
-        // 下架品类不可用于新增消费，历史消费记录不受影响
-        if (category.status !== CATEGORY_STATUS_ON) {
-          throw new BusinessError(
-            'CATEGORY_OFF_SHELF',
-            `手工品类已下架，不能用于新增消费（ID: ${input.categoryId}）`,
-          );
-        }
-        const account = requireAccount(database, input.customerId);
-        if (account.balanceCents < input.consumptionAmountCents) {
-          throw new BusinessError(
-            'INSUFFICIENT_BALANCE',
-            `余额不足：当前 ${account.balanceCents} 分，需要 ${input.consumptionAmountCents} 分`,
-          );
-        }
-        const consumptionRecord = insertConsumptionRecord(database, input);
-        const updatedAccount = updateAccountBalance(
-          database,
-          input.customerId,
-          account.balanceCents,
-          account.balanceCents - input.consumptionAmountCents,
-        );
-        return { account: updatedAccount, consumptionRecord };
-      })
+      .transaction(() => performConsumption(database, input))
       .immediate();
   } catch (error) {
     if (isForeignKeyError(error)) {
@@ -208,4 +177,45 @@ export function createConsumption(
     }
     throw error;
   }
+}
+
+/**
+ * 校验客户、品类状态与余额，写入消费流水并扣减余额。
+ *
+ * 仅供已经开启事务的业务流程（普通消费、开台、续时）调用，调用方负责事务边界。
+ */
+export function performConsumption(
+  database: BetterSqlite3.Database,
+  input: CreateConsumptionInput,
+): ConsumptionTransactionResult {
+  requireCustomer(database, input.customerId);
+  const category = getCraftCategory(database, input.categoryId);
+  if (!category) {
+    throw new BusinessError(
+      'CATEGORY_NOT_FOUND',
+      `手工品类不存在（ID: ${input.categoryId}）`,
+    );
+  }
+  // 下架品类不可用于新增消费，历史消费记录不受影响
+  if (category.status !== CATEGORY_STATUS_ON) {
+    throw new BusinessError(
+      'CATEGORY_OFF_SHELF',
+      `手工品类已下架，不能用于新增消费（ID: ${input.categoryId}）`,
+    );
+  }
+  const account = requireAccount(database, input.customerId);
+  if (account.balanceCents < input.consumptionAmountCents) {
+    throw new BusinessError(
+      'INSUFFICIENT_BALANCE',
+      `余额不足：当前 ${account.balanceCents} 分，需要 ${input.consumptionAmountCents} 分`,
+    );
+  }
+  const consumptionRecord = insertConsumptionRecord(database, input);
+  const updatedAccount = updateAccountBalance(
+    database,
+    input.customerId,
+    account.balanceCents,
+    account.balanceCents - input.consumptionAmountCents,
+  );
+  return { account: updatedAccount, consumptionRecord };
 }

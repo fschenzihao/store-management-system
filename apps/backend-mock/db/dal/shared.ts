@@ -12,7 +12,11 @@ export type BusinessErrorCode =
   | 'DUPLICATE_WECHAT_ID'
   | 'INSUFFICIENT_BALANCE'
   | 'INVALID_INPUT'
-  | 'INVALID_REFERENCE';
+  | 'INVALID_REFERENCE'
+  | 'SESSION_ALREADY_CLOSED'
+  | 'SESSION_NOT_FOUND'
+  | 'TABLE_NOT_FOUND'
+  | 'TABLE_OCCUPIED';
 
 /** 可由后续接口层转换为明确响应的业务错误。 */
 export class BusinessError extends Error {

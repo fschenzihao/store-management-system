@@ -1,0 +1,552 @@
+<script setup lang="ts">
+import type { SeatBoardView } from '../types';
+
+import { computed, ref } from 'vue';
+
+import { useElementSize } from '@vueuse/core';
+
+import { SCENE_HEIGHT, SCENE_WIDTH, TABLE_PROPS } from '../layout';
+import BoardSeat from './board-seat.vue';
+
+defineOptions({ name: 'BoardScene' });
+
+defineProps<{ seats: SeatBoardView[] }>();
+const emit = defineEmits<{ select: [seat: SeatBoardView] }>();
+
+const wrapper = ref<HTMLElement>();
+const { width } = useElementSize(wrapper);
+const scale = computed(() => {
+  const available = width.value || SCENE_WIDTH;
+  return Math.min(Math.max(available / SCENE_WIDTH, 0.45), 1);
+});
+
+const wrapperStyle = computed(() => ({
+  height: `${SCENE_HEIGHT * scale.value + 8}px`,
+}));
+const sceneStyle = computed(() => ({
+  height: `${SCENE_HEIGHT}px`,
+  transform: `scale(${scale.value})`,
+  width: `${SCENE_WIDTH}px`,
+}));
+
+/** 桌位招牌：上排每张四人桌一块，吧台招牌放长桌下方。 */
+const tableSigns = [
+  { label: 'A 桌', x: 180, y: 14 },
+  { label: 'B 桌', x: 480, y: 14 },
+  { label: 'C 桌', x: 780, y: 14 },
+];
+
+const barSign = { label: '吧台', x: 385, y: 540 };
+
+const gridLines = computed(() => {
+  const lines: { x1: number; x2: number; y1: number; y2: number }[] = [];
+  for (let x = 90; x < SCENE_WIDTH; x += 90) {
+    lines.push({ x1: x, x2: x, y1: 0, y2: SCENE_HEIGHT });
+  }
+  for (let y = 80; y < SCENE_HEIGHT; y += 80) {
+    lines.push({ x1: 0, x2: SCENE_WIDTH, y1: y, y2: y });
+  }
+  return lines;
+});
+</script>
+
+<template>
+  <div ref="wrapper" class="board-scene" :style="wrapperStyle">
+    <div class="board-scene__canvas" :style="sceneStyle">
+      <svg
+        class="board-scene__backdrop"
+        :viewBox="`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="floorFill" x1="0" x2="0.3" y1="0" y2="1">
+            <stop offset="0%" stop-color="var(--board-floor-back)" />
+            <stop offset="100%" stop-color="var(--board-floor-front)" />
+          </linearGradient>
+          <radialGradient id="lightPool" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="rgb(255 236 198 / 50%)" />
+            <stop offset="100%" stop-color="rgb(255 236 198 / 0%)" />
+          </radialGradient>
+        </defs>
+
+        <!-- 顶部灯光光斑 -->
+        <ellipse cx="180" cy="150" rx="240" ry="120" fill="url(#lightPool)" />
+        <ellipse cx="480" cy="150" rx="240" ry="120" fill="url(#lightPool)" />
+        <ellipse cx="780" cy="150" rx="240" ry="120" fill="url(#lightPool)" />
+        <ellipse cx="1030" cy="350" rx="220" ry="120" fill="url(#lightPool)" />
+
+        <!-- 地面与网格 -->
+        <rect
+          x="0"
+          y="0"
+          :width="SCENE_WIDTH"
+          :height="SCENE_HEIGHT"
+          fill="url(#floorFill)"
+        />
+        <g class="board-scene__grid">
+          <line
+            v-for="(line, index) in gridLines"
+            :key="index"
+            :x1="line.x1"
+            :x2="line.x2"
+            :y1="line.y1"
+            :y2="line.y2"
+            stroke="var(--board-grid)"
+            stroke-width="1"
+          />
+        </g>
+        <rect
+          x="1"
+          y="1"
+          :width="SCENE_WIDTH - 2"
+          :height="SCENE_HEIGHT - 2"
+          fill="none"
+          stroke="var(--board-floor-border)"
+          stroke-width="2"
+          rx="14"
+        />
+
+        <!-- 桌位发光招牌 -->
+        <g v-for="sign in tableSigns" :key="sign.label">
+          <rect
+            :x="sign.x - 62"
+            :y="sign.y"
+            width="124"
+            height="24"
+            rx="6"
+            fill="var(--board-sign-bg)"
+            stroke="var(--board-sign-border)"
+          />
+          <text
+            :x="sign.x"
+            :y="sign.y + 17"
+            text-anchor="middle"
+            class="board-scene__sign"
+            fill="var(--board-sign)"
+          >
+            {{ sign.label }} · 拼豆手作
+          </text>
+        </g>
+        <g>
+          <rect
+            :x="barSign.x - 62"
+            :y="barSign.y"
+            width="124"
+            height="24"
+            rx="6"
+            fill="var(--board-sign-bg)"
+            stroke="var(--board-sign-border)"
+          />
+          <text
+            :x="barSign.x"
+            :y="barSign.y + 17"
+            text-anchor="middle"
+            class="board-scene__sign"
+            fill="var(--board-sign)"
+          >
+            {{ barSign.label }} · 拼豆手作
+          </text>
+        </g>
+
+        <!-- 金属货架 -->
+        <g>
+          <rect
+            x="950"
+            y="25"
+            width="120"
+            height="78"
+            rx="5"
+            fill="var(--board-shelf)"
+          />
+          <rect
+            x="956"
+            y="31"
+            width="108"
+            height="66"
+            rx="3"
+            fill="none"
+            stroke="var(--board-shelf-line)"
+          />
+          <line
+            v-for="i in 9"
+            :key="i"
+            :x1="956 + i * 10.8"
+            y1="31"
+            :x2="956 + i * 10.8"
+            y2="97"
+            stroke="var(--board-shelf-line)"
+          />
+          <rect
+            x="966"
+            y="42"
+            width="16"
+            height="14"
+            rx="2"
+            fill="var(--board-bead-1)"
+          />
+          <rect
+            x="1002"
+            y="42"
+            width="16"
+            height="14"
+            rx="2"
+            fill="var(--board-bead-3)"
+          />
+          <rect
+            x="990"
+            y="66"
+            width="26"
+            height="14"
+            rx="2"
+            fill="var(--board-bead-2)"
+          />
+        </g>
+
+        <!-- 黑色冰箱 -->
+        <g>
+          <rect
+            x="1100"
+            y="25"
+            width="80"
+            height="95"
+            rx="6"
+            fill="var(--board-fridge)"
+          />
+          <rect
+            x="1107"
+            y="32"
+            width="66"
+            height="81"
+            rx="4"
+            fill="var(--board-fridge-glass)"
+          />
+          <line
+            x1="1107"
+            y1="66"
+            x2="1173"
+            y2="66"
+            stroke="var(--board-fridge)"
+            stroke-width="2"
+          />
+          <rect
+            x="1182"
+            y="58"
+            width="4"
+            height="20"
+            rx="2"
+            fill="var(--board-fridge)"
+          />
+        </g>
+
+        <!-- 落地玻璃门（右侧） -->
+        <g>
+          <rect
+            x="1176"
+            y="120"
+            width="76"
+            height="230"
+            rx="6"
+            fill="var(--board-door)"
+          />
+          <rect
+            x="1183"
+            y="128"
+            width="62"
+            height="214"
+            rx="4"
+            fill="var(--board-door-glass)"
+          />
+          <line
+            x1="1183"
+            y1="199"
+            x2="1245"
+            y2="199"
+            stroke="var(--board-door)"
+            stroke-width="2"
+          />
+          <line
+            x1="1183"
+            y1="270"
+            x2="1245"
+            y2="270"
+            stroke="var(--board-door)"
+            stroke-width="2"
+          />
+          <path
+            d="M1206 152 h14 m-5 -5 l5 5 l-5 5"
+            stroke="var(--board-door-arrow)"
+            stroke-width="2"
+            fill="none"
+            stroke-linecap="round"
+          />
+          <path
+            d="M1222 240 h-14 m5 -5 l-5 5 l5 5"
+            stroke="var(--board-door-arrow)"
+            stroke-width="2"
+            fill="none"
+            stroke-linecap="round"
+          />
+        </g>
+
+        <!-- 门口地垫 -->
+        <g>
+          <rect
+            x="660"
+            y="486"
+            width="76"
+            height="56"
+            rx="8"
+            fill="var(--board-mat)"
+          />
+          <rect
+            x="748"
+            y="486"
+            width="76"
+            height="56"
+            rx="8"
+            fill="var(--board-mat)"
+          />
+          <circle cx="684" cy="508" r="7" fill="var(--board-mat-item)" />
+          <circle cx="706" cy="522" r="7" fill="var(--board-mat-item)" />
+          <circle cx="772" cy="510" r="7" fill="var(--board-mat-item)" />
+          <circle cx="794" cy="524" r="7" fill="var(--board-mat-item)" />
+        </g>
+      </svg>
+
+      <!-- 桌面家具 -->
+      <div
+        v-for="table in TABLE_PROPS"
+        :key="table.label"
+        class="prop-table"
+        :class="`prop-table--${table.kind}`"
+        :style="{
+          height: `${table.height}px`,
+          left: `${table.x - table.width / 2}px`,
+          top: `${table.y - table.height / 2}px`,
+          width: `${table.width}px`,
+        }"
+        aria-hidden="true"
+      ></div>
+
+      <!-- 前台收银台 -->
+      <div class="prop-desk" aria-hidden="true">
+        <span class="prop-desk__main"></span>
+        <span class="prop-desk__return"></span>
+        <span class="prop-desk__screen"></span>
+        <span class="prop-desk__screen prop-desk__screen--second"></span>
+        <span class="prop-desk__paper"></span>
+        <span class="prop-desk__plant"></span>
+        <span class="prop-desk__chair"></span>
+      </div>
+
+      <BoardSeat
+        v-for="seat in seats"
+        :key="seat.layout.seatNo"
+        :seat="seat"
+        @select="emit('select', seat)"
+      />
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.board-scene {
+  --board-floor-back: #f7f3ec;
+  --board-floor-front: #efe6d7;
+  --board-grid: rgb(148 132 108 / 14%);
+  --board-floor-border: rgb(148 132 108 / 22%);
+  --board-sign-bg: #262421;
+  --board-sign-border: rgb(255 255 255 / 14%);
+  --board-sign: #f0d9ab;
+  --board-bead-1: #2f9e8f;
+  --board-bead-2: #e8a33d;
+  --board-bead-3: #e4572e;
+  --board-shelf: #cfd4d6;
+  --board-shelf-line: #a9b0b3;
+  --board-fridge: #2c2c2e;
+  --board-fridge-glass: #4a4d52;
+  --board-door: #3b342c;
+  --board-door-glass: rgb(168 196 198 / 50%);
+  --board-door-arrow: #4f9a9e;
+  --board-mat: #d8d4cd;
+  --board-mat-item: #a8a29a;
+  --board-wood: linear-gradient(135deg, #c98d5a, #a96f42 60%, #8f5a34);
+  --board-wood-border: rgb(255 255 255 / 35%);
+
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 0%, rgb(255 255 255 / 65%), transparent 55%),
+    linear-gradient(180deg, var(--vben-bg, #fbf8f2), transparent 60%);
+  border-radius: 18px;
+}
+
+.board-scene__canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+.board-scene__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.board-scene__grid {
+  opacity: 0.9;
+}
+
+.board-scene__sign {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  filter: drop-shadow(0 0 5px rgb(240 217 171 / 60%));
+}
+
+.prop-table {
+  position: absolute;
+  z-index: 1;
+  border-radius: 10px;
+}
+
+.prop-table--island {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 30%), transparent 45%),
+    var(--board-wood);
+  border: 1px solid var(--board-wood-border);
+  box-shadow:
+    0 14px 24px rgb(70 50 24 / 22%),
+    inset 0 1px 0 rgb(255 255 255 / 50%),
+    inset 0 0 0 6px rgb(120 78 44 / 18%);
+}
+
+.prop-table--bar {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 26%), transparent 40%),
+    var(--board-wood);
+  border: 1px solid var(--board-wood-border);
+  border-radius: 12px;
+  box-shadow:
+    0 14px 24px rgb(70 50 24 / 22%),
+    inset 0 1px 0 rgb(255 255 255 / 50%),
+    inset 0 0 0 6px rgb(120 78 44 / 16%);
+}
+
+.prop-desk {
+  position: absolute;
+  top: 300px;
+  left: 900px;
+  z-index: 1;
+  width: 270px;
+  height: 85px;
+}
+
+.prop-desk__main {
+  position: absolute;
+  inset: 0;
+  background: var(--board-wood);
+  border: 1px solid var(--board-wood-border);
+  border-radius: 10px;
+  box-shadow:
+    0 14px 24px rgb(70 50 24 / 24%),
+    inset 0 1px 0 rgb(255 255 255 / 55%);
+}
+
+.prop-desk__return {
+  position: absolute;
+  top: 84px;
+  left: 0;
+  width: 72px;
+  height: 80px;
+  background: var(--board-wood);
+  border: 1px solid var(--board-wood-border);
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 14px 24px rgb(70 50 24 / 22%);
+}
+
+.prop-desk__screen {
+  position: absolute;
+  top: 18px;
+  left: 60px;
+  width: 52px;
+  height: 40px;
+  background: linear-gradient(160deg, #46555c, #22292d);
+  border: 2px solid #ece7dc;
+  border-radius: 6px;
+  box-shadow: 0 4px 8px rgb(30 22 12 / 30%);
+  transform: rotate(-8deg);
+}
+
+.prop-desk__screen--second {
+  top: 22px;
+  left: 128px;
+  width: 44px;
+  height: 34px;
+  transform: rotate(6deg);
+}
+
+.prop-desk__paper {
+  position: absolute;
+  top: 30px;
+  left: 196px;
+  width: 34px;
+  height: 26px;
+  background: #fdfbf6;
+  border: 1px solid rgb(120 106 84 / 30%);
+  border-radius: 3px;
+  transform: rotate(12deg);
+}
+
+.prop-desk__plant {
+  position: absolute;
+  top: 24px;
+  left: 240px;
+  width: 26px;
+  height: 26px;
+  background:
+    radial-gradient(circle at 50% 32%, #4f9a6d 0 40%, transparent 42%),
+    radial-gradient(circle at 32% 58%, #3f885c 0 32%, transparent 34%),
+    radial-gradient(circle at 68% 60%, #5aa978 0 32%, transparent 34%);
+  border-radius: 50%;
+}
+
+.prop-desk__chair {
+  position: absolute;
+  top: 92px;
+  left: 180px;
+  width: 52px;
+  height: 52px;
+  background: radial-gradient(circle at 50% 45%, #efe9dc 0 58%, #cfc7b6 60%);
+  border-radius: 50%;
+  box-shadow: 0 8px 14px rgb(60 48 32 / 20%);
+}
+
+:global(.dark) .board-scene {
+  --board-floor-back: #2b2a28;
+  --board-floor-front: #35322e;
+  --board-grid: rgb(255 255 255 / 7%);
+  --board-floor-border: rgb(255 255 255 / 10%);
+  --board-sign-bg: #171614;
+  --board-sign-border: rgb(255 255 255 / 10%);
+  --board-sign: #e8c99a;
+  --board-shelf: #4a4b4d;
+  --board-shelf-line: #616467;
+  --board-fridge: #1a1a1b;
+  --board-fridge-glass: #2f3236;
+  --board-door: #1d1b19;
+  --board-door-glass: rgb(120 150 152 / 32%);
+  --board-mat: #3c3a37;
+  --board-mat-item: #6e6a64;
+  --board-wood: linear-gradient(135deg, #8a5c38, #6f4628 60%, #5c3a20);
+  --board-wood-border: rgb(255 255 255 / 12%);
+
+  background:
+    radial-gradient(circle at 20% 0%, rgb(255 255 255 / 6%), transparent 55%),
+    linear-gradient(180deg, #232220, transparent 60%);
+}
+</style>

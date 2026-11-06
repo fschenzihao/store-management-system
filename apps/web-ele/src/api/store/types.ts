@@ -98,6 +98,8 @@ export interface ConsumptionRecord {
   customerId: number;
   customerName: string;
   durationMinutes: number;
+  /** 关联的开台会话；手工录入的历史消费记录为 null */
+  sessionId: null | number;
 }
 
 /** 新增消费结果，余额为事务提交后的最新值。 */
@@ -171,5 +173,69 @@ export interface CreateConsumptionParams {
   categoryId: number;
   consumptionAmountCents: number;
   customerId: number;
+  durationMinutes: number;
+}
+
+/** 桌位看板：座位进行中的会话。 */
+export interface TableBoardSession {
+  categoryId: number;
+  categoryName: string;
+  customerId: number;
+  customerName: string;
+  plannedDurationMinutes: number;
+  plannedEndTime: string;
+  sessionId: number;
+  startTime: string;
+  totalAmountCents: number;
+  totalDurationMinutes: number;
+}
+
+/** 桌位看板中的一个座位。 */
+export interface TableBoardItem {
+  seatNo: number;
+  session: null | TableBoardSession;
+  tableId: number;
+}
+
+/** 当日营业汇总。 */
+export interface TableBoardSummary {
+  activeCount: number;
+  todayDurationMinutes: number;
+  todaySessionCount: number;
+  todayTotalAmountCents: number;
+}
+
+/** 桌位看板接口返回，serverTime 为 UTC 文本，用于校准倒计时。 */
+export interface TableBoardResult {
+  serverTime: string;
+  summary: TableBoardSummary;
+  tables: TableBoardItem[];
+}
+
+/** 开台/续时返回的会话，附带座位号与关联名称。 */
+export interface TableSessionView extends TableBoardSession {
+  seatNo: number;
+  status: number;
+}
+
+/** 开台成功后返回最新余额、消费流水与会话。 */
+export interface TableSessionResult {
+  account: CustomerAccount;
+  consumptionRecord: ConsumptionRecord;
+  session: TableSessionView;
+}
+
+/** 开台参数：桌位为座位级。 */
+export interface OpenTableSessionParams {
+  categoryId: number;
+  consumptionAmountCents: number;
+  customerId: number;
+  durationMinutes: number;
+  tableId: number;
+}
+
+/** 续时参数。 */
+export interface ExtendTableSessionParams {
+  consumptionAmountCents: number;
   durationMinutes: number;
 }
