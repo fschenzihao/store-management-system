@@ -258,7 +258,7 @@ onMounted(loadCategories);
 
       <ElFormItem label="购买时长" prop="durationMinutes">
         <div class="w-full">
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-1.5">
             <button
               v-for="minutes in DURATION_PRESETS"
               :key="minutes"
@@ -324,14 +324,19 @@ onMounted(loadCategories);
 
 <style scoped>
 .duration-chip {
-  padding: 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  height: var(--el-component-size);
+  padding: 0 10px;
   font-size: 12px;
   font-weight: 500;
+  line-height: 1;
   color: #6f685c;
+  white-space: nowrap;
   cursor: pointer;
   background: #f7f3ec;
   border: 1px solid rgb(160 138 108 / 18%);
-  border-radius: 999px;
+  border-radius: var(--el-border-radius-base);
   transition: all 0.2s ease;
 }
 
@@ -344,7 +349,7 @@ onMounted(loadCategories);
   color: #fff;
   background: linear-gradient(135deg, #34a898, #2f9e8f);
   border-color: transparent;
-  box-shadow: 0 6px 14px rgb(47 158 143 / 28%);
+  box-shadow: 0 2px 6px rgb(47 158 143 / 24%);
 }
 
 :global(.dark) .duration-chip {
