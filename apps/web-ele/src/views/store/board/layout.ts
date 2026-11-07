@@ -26,9 +26,9 @@ export const TABLE_PROPS: TableProp[] = [
   { height: 120, kind: 'island', label: 'B 桌·右', width: 60, x: 510, y: 150 },
   { height: 120, kind: 'island', label: 'C 桌·左', width: 60, x: 750, y: 150 },
   { height: 120, kind: 'island', label: 'C 桌·右', width: 60, x: 810, y: 150 },
-  { height: 60, kind: 'bar', label: '吧台·1', width: 120, x: 175, y: 440 },
-  { height: 60, kind: 'bar', label: '吧台·2', width: 120, x: 385, y: 440 },
-  { height: 60, kind: 'bar', label: '吧台·3', width: 120, x: 595, y: 440 },
+  { height: 60, kind: 'bar', label: '吧台·1', width: 120, x: 175, y: 520 },
+  { height: 60, kind: 'bar', label: '吧台·2', width: 120, x: 425, y: 520 },
+  { height: 60, kind: 'bar', label: '吧台·3', width: 120, x: 675, y: 520 },
 ];
 
 export interface SeatLayout {
@@ -89,20 +89,20 @@ const ISLAND_SEAT_OFFSETS = [
 ];
 
 /**
- * 吧台 3 张 120×60 桌块（中心间距 210，块间 90px），每张 2 个位置。
+ * 吧台 3 张 120×60 桌块（中心间距 250，块间 90px），每张 2 个位置。
  * 椅子与拼豆架在桌块内均匀分布（center ± 30，板边距桌沿 10px，与 A 桌一致）；
  * 徽标各向外让 15px，仍保持 90px 间距，避免相邻徽标重叠。
  */
-const BAR_SEATS: SeatLayout[] = [175, 385, 595].flatMap((center, tableIndex) =>
+const BAR_SEATS: SeatLayout[] = [175, 425, 675].flatMap((center, tableIndex) =>
   [-1, 1].map((side, sideIndex) => ({
-    badge: { x: side * 15, y: 54 },
+    badge: { x: side * 25, y: -90 },
     board: { rotate: 0, x: 0, y: 0 },
     chair: { x: 0, y: -50 },
     group: 'bar' as const,
     label: `吧台 ${String(tableIndex * 2 + sideIndex + 1).padStart(2, '0')}`,
     seatNo: tableIndex * 2 + sideIndex + 1,
     x: center + side * 30,
-    y: 440,
+    y: 520,
   })),
 );
 

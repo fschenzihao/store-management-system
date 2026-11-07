@@ -29,15 +29,6 @@ const sceneStyle = computed(() => ({
   width: `${SCENE_WIDTH}px`,
 }));
 
-/** 桌位招牌：上排每张四人桌一块，吧台招牌放长桌下方。 */
-const tableSigns = [
-  { label: 'A 桌', x: 180, y: 14 },
-  { label: 'B 桌', x: 480, y: 14 },
-  { label: 'C 桌', x: 780, y: 14 },
-];
-
-const barSign = { label: '吧台', x: 385, y: 540 };
-
 const gridLines = computed(() => {
   const lines: { x1: number; x2: number; y1: number; y2: number }[] = [];
   for (let x = 90; x < SCENE_WIDTH; x += 90) {
@@ -106,99 +97,33 @@ const gridLines = computed(() => {
           rx="14"
         />
 
-        <!-- 桌位发光招牌 -->
-        <g v-for="sign in tableSigns" :key="sign.label">
-          <rect
-            :x="sign.x - 62"
-            :y="sign.y"
-            width="124"
-            height="24"
-            rx="6"
-            fill="var(--board-sign-bg)"
-            stroke="var(--board-sign-border)"
-          />
-          <text
-            :x="sign.x"
-            :y="sign.y + 17"
-            text-anchor="middle"
-            class="board-scene__sign"
-            fill="var(--board-sign)"
-          >
-            {{ sign.label }} · 拼豆手作
-          </text>
-        </g>
-        <g>
-          <rect
-            :x="barSign.x - 62"
-            :y="barSign.y"
-            width="124"
-            height="24"
-            rx="6"
-            fill="var(--board-sign-bg)"
-            stroke="var(--board-sign-border)"
-          />
-          <text
-            :x="barSign.x"
-            :y="barSign.y + 17"
-            text-anchor="middle"
-            class="board-scene__sign"
-            fill="var(--board-sign)"
-          >
-            {{ barSign.label }} · 拼豆
-          </text>
-        </g>
-
         <!-- 金属货架 -->
         <g>
           <rect
             x="950"
             y="25"
-            width="120"
-            height="78"
+            width="262"
+            height="112"
             rx="5"
             fill="var(--board-shelf)"
           />
           <rect
             x="956"
             y="31"
-            width="108"
-            height="66"
+            width="250"
+            height="100"
             rx="3"
             fill="none"
             stroke="var(--board-shelf-line)"
           />
           <line
-            v-for="i in 9"
+            v-for="i in 22"
             :key="i"
             :x1="956 + i * 10.8"
             y1="31"
             :x2="956 + i * 10.8"
-            y2="97"
+            y2="131"
             stroke="var(--board-shelf-line)"
-          />
-          <rect
-            x="966"
-            y="42"
-            width="16"
-            height="14"
-            rx="2"
-            fill="var(--board-bead-1)"
-          />
-          <rect
-            x="1002"
-            y="42"
-            width="16"
-            height="14"
-            rx="2"
-            fill="var(--board-bead-3)"
-          />
-          <rect
-            x="990"
-            y="66"
-            width="26"
-            height="14"
-            rx="2"
-            fill="var(--board-bead-2)"
           />
         </g>
       </svg>
@@ -245,12 +170,6 @@ const gridLines = computed(() => {
   --board-floor-front: #efe6d7;
   --board-grid: rgb(148 132 108 / 14%);
   --board-floor-border: rgb(148 132 108 / 22%);
-  --board-sign-bg: #262421;
-  --board-sign-border: rgb(255 255 255 / 14%);
-  --board-sign: #f0d9ab;
-  --board-bead-1: #2f9e8f;
-  --board-bead-2: #e8a33d;
-  --board-bead-3: #e4572e;
   --board-shelf: #cfd4d6;
   --board-shelf-line: #a9b0b3;
   --board-wood: linear-gradient(135deg, #c98d5a, #a96f42 60%, #8f5a34);
@@ -281,14 +200,6 @@ const gridLines = computed(() => {
 
 .board-scene__grid {
   opacity: 0.9;
-}
-
-.board-scene__sign {
-  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  filter: drop-shadow(0 0 5px rgb(240 217 171 / 60%));
 }
 
 .prop-table {
@@ -322,8 +233,8 @@ const gridLines = computed(() => {
 
 .prop-desk {
   position: absolute;
-  top: 300px;
-  left: 900px;
+  top: 380px;
+  left: 950px;
   z-index: 1;
   width: 270px;
   height: 85px;
@@ -406,8 +317,8 @@ const gridLines = computed(() => {
 
 .prop-desk__chair {
   position: absolute;
-  top: 92px;
-  left: 180px;
+  top: 100px;
+  left: 150px;
   width: 52px;
   height: 52px;
   background: radial-gradient(circle at 50% 45%, #efe9dc 0 58%, #cfc7b6 60%);
@@ -420,9 +331,6 @@ const gridLines = computed(() => {
   --board-floor-front: #35322e;
   --board-grid: rgb(255 255 255 / 7%);
   --board-floor-border: rgb(255 255 255 / 10%);
-  --board-sign-bg: #171614;
-  --board-sign-border: rgb(255 255 255 / 10%);
-  --board-sign: #e8c99a;
   --board-shelf: #4a4b4d;
   --board-shelf-line: #616467;
   --board-wood: linear-gradient(135deg, #8a5c38, #6f4628 60%, #5c3a20);
