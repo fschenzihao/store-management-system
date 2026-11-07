@@ -14,17 +14,18 @@ defineProps<{ seats: SeatBoardView[] }>();
 const emit = defineEmits<{ select: [seat: SeatBoardView] }>();
 
 const wrapper = ref<HTMLElement>();
-const { width } = useElementSize(wrapper);
+const { height, width } = useElementSize(wrapper);
 const scale = computed(() => {
-  const available = width.value || SCENE_WIDTH;
-  return Math.min(Math.max(available / SCENE_WIDTH, 0.45), 1);
+  const availableWidth = width.value || SCENE_WIDTH;
+  const availableHeight = height.value || SCENE_HEIGHT;
+  // 宽度与父级剩余高度双约束，等比缩放且始终完整放入，避免滚动条
+  return Math.min(availableWidth / SCENE_WIDTH, availableHeight / SCENE_HEIGHT);
 });
 
-const wrapperStyle = computed(() => ({
-  height: `${SCENE_HEIGHT * scale.value + 8}px`,
-}));
 const sceneStyle = computed(() => ({
   height: `${SCENE_HEIGHT}px`,
+  left: `${Math.max((width.value - SCENE_WIDTH * scale.value) / 2, 0)}px`,
+  top: `${Math.max((height.value - SCENE_HEIGHT * scale.value) / 2, 0)}px`,
   transform: `scale(${scale.value})`,
   width: `${SCENE_WIDTH}px`,
 }));
@@ -42,7 +43,7 @@ const gridLines = computed(() => {
 </script>
 
 <template>
-  <div ref="wrapper" class="board-scene" :style="wrapperStyle">
+  <div ref="wrapper" class="board-scene">
     <div class="board-scene__canvas" :style="sceneStyle">
       <svg
         class="board-scene__backdrop"
@@ -176,7 +177,9 @@ const gridLines = computed(() => {
   --board-wood-border: rgb(255 255 255 / 35%);
 
   position: relative;
+  flex: 1;
   width: 100%;
+  min-height: 280px;
   overflow: hidden;
   background:
     radial-gradient(circle at 20% 0%, rgb(255 255 255 / 65%), transparent 55%),

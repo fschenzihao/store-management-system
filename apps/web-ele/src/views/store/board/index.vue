@@ -276,6 +276,7 @@ onMounted(() => loadBoard());
   display: flex;
   flex-direction: column;
   gap: 16px;
+  height: 100%;
   padding: 4px 4px 24px;
 }
 
@@ -445,6 +446,10 @@ onMounted(() => loadBoard());
 }
 
 .board-stage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
   padding: 16px 18px 12px;
   background:
     radial-gradient(circle at 12% 0%, rgb(255 255 255 / 80%), transparent 40%),
@@ -456,6 +461,7 @@ onMounted(() => loadBoard());
 
 .board-stage__head {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   gap: 10px;
   align-items: flex-end;
@@ -517,6 +523,7 @@ onMounted(() => loadBoard());
 
 .board-stage__foot {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: space-between;
