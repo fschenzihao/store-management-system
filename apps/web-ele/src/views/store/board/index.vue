@@ -355,14 +355,29 @@ onMounted(() => loadBoard());
 }
 
 .board-stat {
+  --stat-accent: rgb(168 161 150);
+  --stat-fill-start: rgb(168 161 150 / 22%);
+  --stat-fill-end: rgb(255 255 255 / 92%);
+  --stat-glow: rgb(96 88 74 / 40%);
+
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  min-width: 88px;
-  padding: 8px 14px;
-  background: rgb(255 255 255 / 78%);
-  border: 1px solid rgb(214 200 178 / 45%);
+  gap: 2px;
+  min-width: 92px;
+  padding: 9px 15px 9px 16px;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    var(--stat-fill-start),
+    var(--stat-fill-end) 78%
+  );
+  border: 2px solid var(--stat-accent);
+  border-left-width: 5px;
   border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 65%),
+    0 10px 22px -16px var(--stat-glow);
 }
 
 .board-stat__value {
@@ -388,46 +403,43 @@ onMounted(() => loadBoard());
 }
 
 .board-stat--free {
-  border-left: 3px solid #a8a196;
+  --stat-accent: #8f887b;
+  --stat-fill-start: rgb(143 136 123 / 26%);
+  --stat-fill-end: rgb(255 255 255 / 92%);
+  --stat-glow: rgb(96 88 74 / 42%);
 }
 
 .board-stat--active {
-  background: linear-gradient(
-    135deg,
-    rgb(47 158 143 / 10%),
-    rgb(255 255 255 / 80%)
-  );
-  border-left: 3px solid #2f9e8f;
+  --stat-accent: #25907f;
+  --stat-fill-start: rgb(37 144 127 / 30%);
+  --stat-fill-end: rgb(255 255 255 / 90%);
+  --stat-glow: rgb(37 144 127 / 50%);
 }
 
 .board-stat--active .board-stat__value {
-  color: #2f9e8f;
+  color: #1f8272;
 }
 
 .board-stat--ending {
-  background: linear-gradient(
-    135deg,
-    rgb(232 163 61 / 12%),
-    rgb(255 255 255 / 80%)
-  );
-  border-left: 3px solid #e8a33d;
+  --stat-accent: #d98f22;
+  --stat-fill-start: rgb(232 163 61 / 34%);
+  --stat-fill-end: rgb(255 255 255 / 90%);
+  --stat-glow: rgb(217 143 34 / 50%);
 }
 
 .board-stat--ending .board-stat__value {
-  color: #c07f1f;
+  color: #b1710f;
 }
 
 .board-stat--overtime {
-  background: linear-gradient(
-    135deg,
-    rgb(228 87 46 / 10%),
-    rgb(255 255 255 / 80%)
-  );
-  border-left: 3px solid #e4572e;
+  --stat-accent: #d8481f;
+  --stat-fill-start: rgb(228 87 46 / 30%);
+  --stat-fill-end: rgb(255 255 255 / 90%);
+  --stat-glow: rgb(216 72 31 / 48%);
 }
 
 .board-stat--overtime .board-stat__value {
-  color: #d24a22;
+  color: #c03f18;
 }
 
 .board-stat__meta {
@@ -572,14 +584,37 @@ onMounted(() => loadBoard());
   color: rgb(255 255 255 / 50%);
 }
 
-:global(.dark) .board-sync,
-:global(.dark) .board-stat {
+:global(.dark) .board-sync {
   background: rgb(255 255 255 / 4%);
   border-color: rgb(255 255 255 / 8%);
 }
 
+:global(.dark) .board-stat {
+  background: linear-gradient(
+    135deg,
+    var(--stat-fill-start),
+    rgb(255 255 255 / 4%) 78%
+  );
+  border-color: var(--stat-accent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 8%),
+    0 12px 24px -18px rgb(0 0 0 / 75%);
+}
+
 :global(.dark) .board-stat__value {
   color: rgb(255 255 255 / 92%);
+}
+
+:global(.dark) .board-stat--active .board-stat__value {
+  color: #5cc9b8;
+}
+
+:global(.dark) .board-stat--ending .board-stat__value {
+  color: #f0b355;
+}
+
+:global(.dark) .board-stat--overtime .board-stat__value {
+  color: #ff7a4f;
 }
 
 :global(.dark) .board-stat__meta b {
