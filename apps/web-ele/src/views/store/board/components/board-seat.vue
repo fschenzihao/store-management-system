@@ -183,18 +183,27 @@ const ariaLabel = computed(() => {
 }
 
 .seat__badge {
+  --badge-accent: var(--seat-accent);
+  --badge-ink: var(--seat-accent);
+  --badge-fill-start: rgb(141 133 121 / 22%);
+  --badge-fill-end: rgb(255 255 255 / 92%);
+  --badge-glow: rgb(96 88 74 / 40%);
+  --badge-tint: rgb(255 255 255 / 12%);
+
   position: absolute;
-  top: -23px;
-  left: -44px;
+  top: -26px;
+  left: -58px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  width: 88px;
-  padding: 4px 6px 3px;
-  color: #fff;
-  background: linear-gradient(160deg, rgb(35 33 30 / 92%), rgb(26 24 22 / 78%));
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 9px;
+  gap: 3px;
+  width: 116px;
+  padding: 5px 6px 4px;
+  color: #2b2a28;
+  background:
+    linear-gradient(160deg, var(--badge-fill-start), var(--badge-fill-end) 78%),
+    rgb(251 247 240 / 96%);
+  border: 1px solid var(--badge-accent);
+  border-radius: 10px;
   box-shadow:
     0 8px 18px rgb(30 22 12 / 28%),
     inset 0 1px 0 rgb(255 255 255 / 12%);
@@ -214,21 +223,61 @@ const ariaLabel = computed(() => {
   border-color: rgb(120 106 84 / 18%);
 }
 
+.seat--active .seat__badge {
+  --badge-accent: #25907f;
+  --badge-ink: #1f8272;
+  --badge-fill-start: rgb(37 144 127 / 30%);
+  --badge-fill-end: rgb(255 255 255 / 90%);
+  --badge-glow: rgb(37 144 127 / 50%);
+  --badge-tint: rgb(37 144 127 / 14%);
+}
+
+.seat--ending .seat__badge {
+  --badge-accent: #d98f22;
+  --badge-ink: #b1710f;
+  --badge-fill-start: rgb(232 163 61 / 34%);
+  --badge-fill-end: rgb(255 255 255 / 90%);
+  --badge-glow: rgb(217 143 34 / 50%);
+  --badge-tint: rgb(217 143 34 / 16%);
+
+  animation: seat-breathe 2s ease-in-out infinite;
+}
+
+.seat--overtime .seat__badge {
+  --badge-accent: #d8481f;
+  --badge-ink: #c03f18;
+  --badge-fill-start: rgb(228 87 46 / 30%);
+  --badge-fill-end: rgb(255 255 255 / 90%);
+  --badge-glow: rgb(216 72 31 / 48%);
+  --badge-tint: rgb(216 72 31 / 14%);
+
+  animation: seat-alert 1.2s ease-in-out infinite;
+}
+
+.seat--active .seat__badge,
+.seat--ending .seat__badge,
+.seat--overtime .seat__badge {
+  border-color: var(--badge-accent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 65%),
+    0 10px 22px -16px var(--badge-glow);
+}
+
 .seat__badge-head {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   align-items: center;
   min-width: 0;
 }
 
 .seat__no {
   flex: none;
-  padding: 0 3px;
+  padding: 0 4px;
   font-size: 9px;
   font-weight: 600;
-  line-height: 13px;
-  color: var(--seat-accent);
-  background: rgb(255 255 255 / 12%);
+  line-height: 14px;
+  color: var(--badge-ink);
+  background: var(--badge-tint);
   border-radius: 3px;
 }
 
@@ -237,20 +286,22 @@ const ariaLabel = computed(() => {
 }
 
 .seat__name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 10px;
   font-weight: 600;
-  line-height: 13px;
+  line-height: 14px;
   white-space: nowrap;
 }
 
 .seat__dot {
   flex: none;
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   margin-left: auto;
-  background: var(--seat-accent);
+  background: var(--badge-accent);
   border-radius: 50%;
 }
 
@@ -271,19 +322,22 @@ const ariaLabel = computed(() => {
 
 .seat__badge-body {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   align-items: center;
   justify-content: space-between;
 }
 
 .seat__time {
+  flex: 1;
+  min-width: 0;
   font-family: SFMono-Regular, 'JetBrains Mono', Menlo, monospace;
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 16px;
-  color: var(--seat-accent);
+  line-height: 18px;
+  color: var(--badge-ink);
   letter-spacing: 0.4px;
+  white-space: nowrap;
 }
 
 .seat--free .seat__time {
@@ -295,14 +349,14 @@ const ariaLabel = computed(() => {
 
 .seat__ring {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   transform: rotate(-90deg);
 }
 
 .seat__ring-track {
   fill: none;
-  stroke: rgb(255 255 255 / 18%);
+  stroke: rgb(43 42 40 / 12%);
   stroke-width: 3;
 }
 
@@ -312,7 +366,7 @@ const ariaLabel = computed(() => {
 
 .seat__ring-value {
   fill: none;
-  stroke: var(--seat-accent);
+  stroke: var(--badge-accent);
   stroke-width: 3;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.9s linear;
@@ -329,6 +383,15 @@ const ariaLabel = computed(() => {
     inset 0 1px 0 rgb(255 255 255 / 16%);
 }
 
+.seat--active:hover .seat__badge,
+.seat--ending:hover .seat__badge,
+.seat--overtime:hover .seat__badge {
+  border-color: var(--badge-accent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 65%),
+    0 12px 24px -14px var(--badge-glow);
+}
+
 .seat:hover .seat__board {
   filter: brightness(1.08);
 }
@@ -340,17 +403,8 @@ const ariaLabel = computed(() => {
 }
 
 .seat:focus-visible .seat__badge {
-  outline: 2px solid var(--seat-accent);
+  outline: 2px solid var(--badge-accent);
   outline-offset: 2px;
-}
-
-.seat--ending .seat__badge {
-  animation: seat-breathe 2s ease-in-out infinite;
-}
-
-.seat--overtime .seat__badge {
-  border-color: rgb(228 87 46 / 55%);
-  animation: seat-alert 1.2s ease-in-out infinite;
 }
 
 @keyframes seat-pulse {
@@ -369,22 +423,30 @@ const ariaLabel = computed(() => {
 @keyframes seat-breathe {
   0%,
   100% {
-    box-shadow: 0 8px 18px rgb(30 22 12 / 28%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 65%),
+      0 10px 22px -16px rgb(217 143 34 / 45%);
   }
 
   50% {
-    box-shadow: 0 10px 24px rgb(232 163 61 / 42%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 65%),
+      0 12px 26px -14px rgb(217 143 34 / 60%);
   }
 }
 
 @keyframes seat-alert {
   0%,
   100% {
-    box-shadow: 0 8px 18px rgb(228 87 46 / 25%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 65%),
+      0 10px 22px -16px rgb(216 72 31 / 48%);
   }
 
   50% {
-    box-shadow: 0 10px 26px rgb(228 87 46 / 55%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 65%),
+      0 12px 26px -14px rgb(216 72 31 / 62%);
   }
 }
 

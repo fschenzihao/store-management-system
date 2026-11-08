@@ -95,14 +95,14 @@ const BAR_SEAT_COUNT = 6;
  * 吧台 3 张 120×60 桌块（中心间距 250，块间 90px），每张 2 个位置。
  * 编号自右向左递增：最右侧座位为 01，最左侧座位为 06。
  * 椅子与拼豆架在桌块内均匀分布（center ± 30，板边距桌沿 10px，与 A 桌一致）；
- * 徽标各向外让 15px，仍保持 90px 间距，避免相邻徽标重叠。
+ * 徽标各向外让 32px，相邻徽标中心间距 124px，容纳加宽后的徽标且不重叠。
  */
 const BAR_SEATS: SeatLayout[] = [175, 425, 675].flatMap((center, tableIndex) =>
   [-1, 1].map((side, sideIndex) => {
     // 从左到右的物理序号（0~5）取反，得到从右到左的座位编号
     const seatNo = BAR_SEAT_COUNT - (tableIndex * 2 + sideIndex);
     return {
-      badge: { x: side * 25, y: -90 },
+      badge: { x: side * 32, y: -90 },
       board: { rotate: 0, x: 0, y: 0 },
       chair: { x: 0, y: -50 },
       group: 'bar' as const,
