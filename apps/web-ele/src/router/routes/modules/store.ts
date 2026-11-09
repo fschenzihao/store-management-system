@@ -42,6 +42,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/store/account/index.vue'),
         meta: { icon: 'lucide:coins', title: '客户余额' },
       },
+      {
+        name: 'StoreSetting',
+        path: 'setting',
+        component: () => import('#/views/store/setting/index.vue'),
+        meta: { icon: 'lucide:settings', title: '系统设置' },
+      },
     ],
   },
 ];

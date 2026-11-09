@@ -196,6 +196,21 @@ export function optionalNumberField(
   return value;
 }
 
+/** 读取支持清空的可选数字字段：undefined 表示未提供，null 表示清空。 */
+export function optionalNullableNumberField(
+  body: Record<string, unknown>,
+  field: string,
+): null | number | undefined {
+  const value = body[field];
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (typeof value !== 'number') {
+    throw new BusinessError('INVALID_INPUT', `${field} 必须为数字或 null`);
+  }
+  return value;
+}
+
 /** 对过滤后的完整列表做内存分页。 */
 export function paginate<T>(
   items: T[],

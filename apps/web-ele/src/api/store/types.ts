@@ -253,3 +253,19 @@ export interface ExtendTableSessionParams {
   consumptionAmountCents: number;
   durationMinutes: number;
 }
+
+/** 系统设置：默认客户与默认手工品类，未配置时为 null。 */
+export interface StoreSetting {
+  defaultCategoryId: null | number;
+  defaultCategoryName: null | string;
+  defaultCustomerId: null | number;
+  defaultCustomerName: null | string;
+  /** 配置项最后修改时间；从未保存过时为 null。 */
+  updateTime: null | string;
+}
+
+/** 修改系统设置参数；字段省略表示不修改，传 null 表示清空。 */
+export interface UpdateStoreSettingParams {
+  defaultCategoryId?: null | number;
+  defaultCustomerId?: null | number;
+}

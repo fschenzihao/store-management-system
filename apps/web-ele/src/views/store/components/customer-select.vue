@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { Customer } from '#/api/store';
 
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import { ElOption, ElSelect } from 'element-plus';
 
-import { getCustomerListApi } from '#/api/store';
+import { getCustomerDetailApi, getCustomerListApi } from '#/api/store';
 
 import { DEFAULT_PAGE, MAX_OPTIONS } from '../shared';
 
@@ -30,6 +30,20 @@ const selectedId = computed({
   set: (value) => emit('update:modelValue', value),
 });
 
+/** 列表缺少已选客户时补齐选项，避免标签与选项丢失。 */
+function mergeSelectedCustomer(list: Customer[]): Customer[] {
+  if (
+    props.modelValue === undefined ||
+    list.some((item) => item.customerId === props.modelValue)
+  ) {
+    return list;
+  }
+  const selected =
+    selectedCustomer.value ??
+    customers.value.find((item) => item.customerId === props.modelValue);
+  return selected ? [selected, ...list] : list;
+}
+
 /** 下拉默认加载前 100 位客户；输入关键字时走服务端按客户名模糊查询。 */
 async function loadCustomers(keyword?: string) {
   loading.value = true;
@@ -39,11 +53,34 @@ async function loadCustomers(keyword?: string) {
       page: DEFAULT_PAGE,
       pageSize: MAX_OPTIONS,
     });
-    customers.value = result.items;
+    customers.value = mergeSelectedCustomer(result.items);
   } catch {
     customers.value = [];
   } finally {
     loading.value = false;
+  }
+}
+
+/** 外部预置选中值时，若选项不在当前列表中，按客户详情补齐并回显。 */
+async function syncSelectedCustomer(customerId: number | undefined) {
+  if (customerId === undefined) {
+    return;
+  }
+  const matched = customers.value.find(
+    (item) => item.customerId === customerId,
+  );
+  if (matched) {
+    selectedCustomer.value = matched;
+    return;
+  }
+  try {
+    const detail = await getCustomerDetailApi(customerId);
+    selectedCustomer.value = detail.customer;
+    if (!customers.value.some((item) => item.customerId === customerId)) {
+      customers.value = [detail.customer, ...customers.value];
+    }
+  } catch {
+    // 客户不存在或已被删除时保持未选中，由表单校验提示重新选择
   }
 }
 
@@ -65,16 +102,11 @@ async function handleVisibleChange(visible: boolean) {
     return;
   }
   await loadCustomers();
-  if (
-    props.modelValue !== undefined &&
-    !customers.value.some((item) => item.customerId === props.modelValue) &&
-    selectedCustomer.value
-  ) {
-    customers.value = [selectedCustomer.value, ...customers.value];
-  }
 }
 
 defineExpose({ reload: loadCustomers });
+
+watch(() => props.modelValue, syncSelectedCustomer, { immediate: true });
 
 onMounted(loadCustomers);
 </script>

@@ -24,6 +24,7 @@ import {
 } from '#/api/store';
 
 import CustomerSelect from '../../components/customer-select.vue';
+import { loadStoreSetting } from '../../setting/use-store-setting';
 import { formatCents, MAX_OPTIONS, yuanToCents } from '../../shared';
 import { DURATION_PRESETS, getSeatLayout } from '../layout';
 
@@ -100,6 +101,9 @@ const rules: FormRules = {
   ],
 };
 
+/** 品类请求去重：避免同时打开弹窗与初始化时重复请求。 */
+let categoriesRequest: null | Promise<void> = null;
+
 async function loadCategories() {
   loadingCategories.value = true;
   try {
@@ -114,6 +118,17 @@ async function loadCategories() {
   } finally {
     loadingCategories.value = false;
   }
+}
+
+/** 确保上架品类已加载，供默认品类预填时判断可用性。 */
+function ensureCategoriesLoaded(): Promise<void> {
+  if (categories.value.length > 0) {
+    return Promise.resolve();
+  }
+  categoriesRequest ??= loadCategories().finally(() => {
+    categoriesRequest = null;
+  });
+  return categoriesRequest;
 }
 
 async function loadAccount(customerId: number | undefined) {
@@ -136,8 +151,8 @@ function handleCustomerChange(customer: Customer | undefined) {
   loadAccount(form.customerId);
 }
 
-/** 打开弹窗并重置表单。 */
-function open(item: TableBoardItem) {
+/** 打开弹窗并重置表单，空表单时按系统设置预填默认客户与默认品类。 */
+async function open(item: TableBoardItem) {
   table.value = item;
   form.amountYuan = undefined;
   form.categoryId = undefined;
@@ -147,8 +162,27 @@ function open(item: TableBoardItem) {
   accountName.value = '';
   formRef.value?.clearValidate();
   visible.value = true;
-  if (categories.value.length === 0) {
-    loadCategories();
+
+  const [setting] = await Promise.all([
+    loadStoreSetting(),
+    ensureCategoriesLoaded(),
+  ]);
+
+  // 等待期间用户可能已手动选择，仅在仍为空时预填
+  if (form.customerId === undefined && setting.defaultCustomerId !== null) {
+    form.customerId = setting.defaultCustomerId;
+    loadAccount(form.customerId);
+  }
+  if (form.categoryId === undefined && setting.defaultCategoryId !== null) {
+    const defaultCategoryId = setting.defaultCategoryId;
+    // 仅预填仍在架品类，避免默认品类下架后开台失败
+    if (
+      categories.value.some(
+        (category) => category.categoryId === defaultCategoryId,
+      )
+    ) {
+      form.categoryId = defaultCategoryId;
+    }
   }
 }
 
@@ -190,7 +224,7 @@ async function submit() {
 }
 
 defineExpose({ open });
-onMounted(loadCategories);
+onMounted(ensureCategoriesLoaded);
 </script>
 
 <template>
