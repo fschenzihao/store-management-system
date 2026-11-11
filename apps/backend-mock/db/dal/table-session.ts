@@ -8,17 +8,28 @@ export type TableSessionStatus =
   | typeof TABLE_SESSION_ACTIVE
   | typeof TABLE_SESSION_CLOSED;
 
+/** 计时方式：1=按购买时长倒计时、2=实际计时（不设计划结束时间）。 */
+export const TIMING_MODE_PURCHASED = 1;
+export const TIMING_MODE_ELAPSED = 2;
+
+export type TableSessionTimingMode =
+  | typeof TIMING_MODE_ELAPSED
+  | typeof TIMING_MODE_PURCHASED;
+
 export interface TableSession {
   categoryId: number;
   closeTime: null | string;
   createTime: string;
   customerId: number;
+  /** 购买时长；实际计时模式为 0（库内为约束占位值）。 */
   plannedDurationMinutes: number;
-  plannedEndTime: string;
+  /** 计划结束时间；实际计时模式为 null（库内为约束占位值）。 */
+  plannedEndTime: null | string;
   sessionId: number;
   startTime: string;
   status: TableSessionStatus;
   tableId: number;
+  timingMode: TableSessionTimingMode;
   totalAmountCents: number;
   totalDurationMinutes: number;
   updateTime: string;
@@ -30,10 +41,13 @@ export interface TableBoardSession {
   categoryName: string;
   customerId: number;
   customerName: string;
+  /** 购买时长；实际计时模式为 0。 */
   plannedDurationMinutes: number;
-  plannedEndTime: string;
+  /** 计划结束时间；实际计时模式为 null。 */
+  plannedEndTime: null | string;
   sessionId: number;
   startTime: string;
+  timingMode: TableSessionTimingMode;
   totalAmountCents: number;
   totalDurationMinutes: number;
 }
@@ -62,6 +76,7 @@ interface TableSessionRow {
   start_time: string;
   status: TableSessionStatus;
   table_id: number;
+  timing_mode: TableSessionTimingMode;
   total_amount_cents: number;
   total_duration_minutes: number;
   update_time: string;
@@ -78,22 +93,26 @@ interface TableBoardRow {
   session_id: null | number;
   start_time: null | string;
   table_id: number;
+  timing_mode: null | number;
   total_amount_cents: null | number;
   total_duration_minutes: null | number;
 }
 
 function mapTableSession(row: TableSessionRow): TableSession {
+  const elapsed = row.timing_mode === TIMING_MODE_ELAPSED;
   return {
     categoryId: row.category_id,
     closeTime: row.close_time,
     createTime: row.create_time,
     customerId: row.customer_id,
-    plannedDurationMinutes: row.planned_duration_minutes,
-    plannedEndTime: row.planned_end_time,
+    // 实际计时模式不设计划结束时间，库内占位值不向业务层暴露
+    plannedDurationMinutes: elapsed ? 0 : row.planned_duration_minutes,
+    plannedEndTime: elapsed ? null : row.planned_end_time,
     sessionId: row.session_id,
     startTime: row.start_time,
     status: row.status,
     tableId: row.table_id,
+    timingMode: row.timing_mode,
     totalAmountCents: row.total_amount_cents,
     totalDurationMinutes: row.total_duration_minutes,
     updateTime: row.update_time,
@@ -130,6 +149,7 @@ export interface InsertTableSessionInput {
   plannedEndTime: string;
   startTime: string;
   tableId: number;
+  timingMode: TableSessionTimingMode;
   totalAmountCents: number;
   totalDurationMinutes: number;
 }
@@ -143,8 +163,8 @@ export function insertTableSession(
     .prepare(
       `INSERT INTO table_session
         (table_id, customer_id, category_id, status, planned_duration_minutes,
-         start_time, planned_end_time, total_amount_cents, total_duration_minutes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         start_time, planned_end_time, timing_mode, total_amount_cents, total_duration_minutes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.tableId,
@@ -154,6 +174,7 @@ export function insertTableSession(
       input.plannedDurationMinutes,
       input.startTime,
       input.plannedEndTime,
+      input.timingMode,
       input.totalAmountCents,
       input.totalDurationMinutes,
     );
@@ -199,6 +220,22 @@ export function extendTableSessionRow(
     );
 }
 
+/** 仅供结账事务调用：实际计时模式结账时把实际用时写入累计时长。 */
+export function updateTableSessionDurationRow(
+  database: BetterSqlite3.Database,
+  sessionId: number,
+  durationMinutes: number,
+  updateTime: string,
+): void {
+  database
+    .prepare(
+      `UPDATE table_session
+       SET total_duration_minutes = ?, update_time = ?
+       WHERE session_id = ? AND status = ?`,
+    )
+    .run(durationMinutes, updateTime, sessionId, TABLE_SESSION_ACTIVE);
+}
+
 /** 仅供结束事务调用；重复结束由事务层校验。 */
 export function closeTableSessionRow(
   database: BetterSqlite3.Database,
@@ -230,7 +267,7 @@ export function listTableBoard(
               s.session_id, s.customer_id, c.customer_name,
               s.category_id, cat.category_name,
               s.planned_duration_minutes, s.start_time, s.planned_end_time,
-              s.total_amount_cents, s.total_duration_minutes
+              s.timing_mode, s.total_amount_cents, s.total_duration_minutes
        FROM store_table t
        LEFT JOIN table_session s ON s.table_id = t.table_id AND s.status = ?
        LEFT JOIN customer c ON c.customer_id = s.customer_id
@@ -238,25 +275,33 @@ export function listTableBoard(
        ORDER BY t.seat_no`,
     )
     .all(TABLE_SESSION_ACTIVE) as TableBoardRow[];
-  return rows.map((row) => ({
-    seatNo: row.seat_no,
-    session:
-      row.session_id === null
-        ? null
-        : {
-            categoryId: row.category_id ?? 0,
-            categoryName: row.category_name ?? '',
-            customerId: row.customer_id ?? 0,
-            customerName: row.customer_name ?? '',
-            plannedDurationMinutes: row.planned_duration_minutes ?? 0,
-            plannedEndTime: row.planned_end_time ?? '',
-            sessionId: row.session_id,
-            startTime: row.start_time ?? '',
-            totalAmountCents: row.total_amount_cents ?? 0,
-            totalDurationMinutes: row.total_duration_minutes ?? 0,
-          },
-    tableId: row.table_id,
-  }));
+  return rows.map((row) => {
+    const timingMode = (row.timing_mode ??
+      TIMING_MODE_PURCHASED) as TableSessionTimingMode;
+    const elapsed = timingMode === TIMING_MODE_ELAPSED;
+    return {
+      seatNo: row.seat_no,
+      session:
+        row.session_id === null
+          ? null
+          : {
+              categoryId: row.category_id ?? 0,
+              categoryName: row.category_name ?? '',
+              customerId: row.customer_id ?? 0,
+              customerName: row.customer_name ?? '',
+              plannedDurationMinutes: elapsed
+                ? 0
+                : (row.planned_duration_minutes ?? 0),
+              plannedEndTime: elapsed ? null : (row.planned_end_time ?? ''),
+              sessionId: row.session_id,
+              startTime: row.start_time ?? '',
+              timingMode,
+              totalAmountCents: row.total_amount_cents ?? 0,
+              totalDurationMinutes: row.total_duration_minutes ?? 0,
+            },
+      tableId: row.table_id,
+    };
+  });
 }
 
 interface TableBoardSummaryRow {
@@ -265,7 +310,7 @@ interface TableBoardSummaryRow {
   total_duration_minutes: number;
 }
 
-/** 当日营业汇总：以 UTC 日期对齐 start_time 与 SQLite 的 date('now')。 */
+/** 当日营业汇总：开台次数与时长以会话为准，金额按实际已结消费流水统计。 */
 export function getTableBoardSummary(
   database: BetterSqlite3.Database,
   activeCount: number,
@@ -273,8 +318,11 @@ export function getTableBoardSummary(
   const row = database
     .prepare(
       `SELECT COUNT(*) AS session_count,
-              COALESCE(SUM(total_amount_cents), 0) AS total_amount_cents,
-              COALESCE(SUM(total_duration_minutes), 0) AS total_duration_minutes
+              COALESCE(SUM(total_duration_minutes), 0) AS total_duration_minutes,
+              (SELECT COALESCE(SUM(r.consumption_amount_cents), 0)
+                 FROM consumption_record r
+                 JOIN table_session settled ON settled.session_id = r.session_id
+                WHERE date(settled.start_time) = date('now')) AS total_amount_cents
        FROM table_session
        WHERE date(start_time) = date('now')`,
     )

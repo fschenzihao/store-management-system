@@ -35,9 +35,14 @@ const badgeStyle = computed(() => ({
 
 const ariaLabel = computed(() => {
   const base = `${layout.value.label}，${props.seat.state === 'free' ? '空闲' : customerName.value}`;
-  return props.seat.state === 'free'
-    ? `${base}，点击开台`
-    : `${base}，剩余 ${props.seat.timeText}`;
+  if (props.seat.state === 'free') {
+    return `${base}，点击开台`;
+  }
+  // 实际计时模式的文案已带「已用」前缀，其余为倒计时，补「剩余」
+  const timeLabel = props.seat.timeText.startsWith('已用')
+    ? props.seat.timeText
+    : `剩余 ${props.seat.timeText}`;
+  return `${base}，${timeLabel}`;
 });
 </script>
 

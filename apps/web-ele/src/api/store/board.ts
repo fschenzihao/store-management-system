@@ -1,8 +1,10 @@
 import type {
   ExtendTableSessionParams,
   OpenTableSessionParams,
+  SettleTableSessionParams,
   TableBoardResult,
   TableSessionResult,
+  TableSessionSettlementResult,
   TableSessionView,
 } from './types';
 
@@ -16,14 +18,14 @@ export async function getTableBoardApi() {
 }
 
 /**
- * 按座位开台，事务内写入会话、消费流水并扣减余额
+ * 按座位开台：只写会话并开始计时，不写消费流水、不扣余额
  */
 export async function openTableSessionApi(data: OpenTableSessionParams) {
   return requestClient.post<TableSessionResult>('/table-sessions', data);
 }
 
 /**
- * 续时：从计划结束时间与当前时间中较晚者继续累加
+ * 续时：从计划结束时间与当前时间中较晚者继续累加，不扣款
  */
 export async function extendTableSessionApi(
   sessionId: number,
@@ -36,7 +38,20 @@ export async function extendTableSessionApi(
 }
 
 /**
- * 结束会话并释放座位
+ * 结账并关台：按实收金额写消费流水、扣减余额，成功后结束会话并释放座位
+ */
+export async function settleTableSessionApi(
+  sessionId: number,
+  data: SettleTableSessionParams,
+) {
+  return requestClient.post<TableSessionSettlementResult>(
+    `/table-sessions/${sessionId}/settle`,
+    data,
+  );
+}
+
+/**
+ * 关台（免结账）：直接结束会话并释放座位，不生成流水、不扣款
  */
 export async function closeTableSessionApi(sessionId: number) {
   return requestClient.post<{ session: TableSessionView }>(

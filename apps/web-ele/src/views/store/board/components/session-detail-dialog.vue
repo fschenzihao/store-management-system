@@ -3,7 +3,7 @@ import type { SeatState } from '../types';
 
 import type { TableBoardItem } from '#/api/store';
 
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import {
   ElButton,
@@ -13,7 +13,12 @@ import {
   ElMessageBox,
 } from 'element-plus';
 
-import { closeTableSessionApi, extendTableSessionApi } from '#/api/store';
+import {
+  closeTableSessionApi,
+  extendTableSessionApi,
+  settleTableSessionApi,
+  TIMING_MODE_ELAPSED,
+} from '#/api/store';
 
 import { formatCents, formatUtcDateTime, yuanToCents } from '../../shared';
 import { EXTEND_PRESETS, getSeatLayout } from '../layout';
@@ -22,6 +27,8 @@ import { formatCountdown, formatMinutes } from '../use-board-clock';
 defineOptions({ name: 'SessionDetailDialog' });
 
 const props = defineProps<{
+  /** 实际计时模式的已用毫秒数，购买时长模式为 0 */
+  elapsedMs: number;
   modelValue: boolean;
   remainingMs: number;
   seat: null | TableBoardItem;
@@ -42,8 +49,15 @@ const session = computed(() => props.seat?.session ?? null);
 const seatLabel = computed(() =>
   props.seat ? getSeatLayout(props.seat.seatNo).label : '',
 );
-const overtime = computed(() => props.remainingMs <= 0);
+/** 实际计时模式：无计划结束时间，展示已用时长 */
+const isElapsed = computed(
+  () => session.value?.timingMode === TIMING_MODE_ELAPSED,
+);
+const overtime = computed(() => !isElapsed.value && props.remainingMs <= 0);
 const progress = computed(() => {
+  if (isElapsed.value) {
+    return 0;
+  }
   const totalMs = (session.value?.plannedDurationMinutes ?? 0) * 60_000;
   if (totalMs <= 0) {
     return 0;
@@ -52,16 +66,40 @@ const progress = computed(() => {
 });
 const ringLength = 289;
 const ringOffset = computed(() => ringLength * (1 - progress.value));
-const countdownText = computed(() =>
-  overtime.value
+const heroText = computed(() => {
+  if (isElapsed.value) {
+    return formatCountdown(props.elapsedMs);
+  }
+  return overtime.value
     ? `超时 ${formatCountdown(-props.remainingMs)}`
-    : formatCountdown(props.remainingMs),
+    : formatCountdown(props.remainingMs);
+});
+/** 实际计时模式结账时的预计用时（分钟），向上取整且至少 1 分钟 */
+const elapsedMinutes = computed(() =>
+  Math.max(1, Math.ceil(props.elapsedMs / 60_000)),
 );
 
 const extending = ref(false);
+const settling = ref(false);
 const closing = ref(false);
 const extendMinutes = ref(60);
 const extendAmountYuan = ref<number>();
+const settleAmountYuan = ref<number>();
+
+/** 应付金额：开台与续时累计的预估金额，也是结账实收金额的上限 */
+const payableCents = computed(() => session.value?.totalAmountCents ?? 0);
+
+// 打开弹窗或应付金额变化时，把实收金额重置为全额应付
+watch(
+  () =>
+    [props.modelValue, session.value?.sessionId, payableCents.value] as const,
+  ([visible, sessionId, total]) => {
+    if (visible && sessionId !== undefined) {
+      settleAmountYuan.value = total / 100;
+    }
+  },
+  { immediate: true },
+);
 
 async function submitExtend() {
   if (!session.value) {
@@ -76,17 +114,17 @@ async function submitExtend() {
     !Number.isFinite(extendAmountYuan.value) ||
     extendAmountYuan.value < 0
   ) {
-    ElMessage.warning('请输入不小于 0 的续时金额');
+    ElMessage.warning('请输入不小于 0 的续时预估金额');
     return;
   }
   extending.value = true;
   try {
     const result = await extendTableSessionApi(session.value.sessionId, {
-      consumptionAmountCents: yuanToCents(extendAmountYuan.value),
       durationMinutes: extendMinutes.value,
+      estimatedAmountCents: yuanToCents(extendAmountYuan.value),
     });
     ElMessage.success(
-      `续时成功，剩余余额 ${formatCents(result.account.balanceCents)}`,
+      `续时成功，应付金额更新为 ${formatCents(result.session.totalAmountCents)}`,
     );
     extendAmountYuan.value = undefined;
     emit('success');
@@ -97,17 +135,73 @@ async function submitExtend() {
   }
 }
 
+async function submitSettle() {
+  if (!session.value) {
+    return;
+  }
+  if (
+    settleAmountYuan.value === undefined ||
+    !Number.isFinite(settleAmountYuan.value) ||
+    settleAmountYuan.value < 0
+  ) {
+    ElMessage.warning('请输入不小于 0 的实收金额');
+    return;
+  }
+  const amountCents = yuanToCents(settleAmountYuan.value);
+  // 实际计时模式按实际用时结算，实收金额不受开台预估金额限制
+  if (!isElapsed.value && amountCents > payableCents.value) {
+    ElMessage.warning(
+      `实收金额不能超过应付金额 ${formatCents(payableCents.value)}`,
+    );
+    return;
+  }
+  const durationText = isElapsed.value
+    ? `，实际用时 ${elapsedMinutes.value} 分钟`
+    : '';
+  try {
+    await ElMessageBox.confirm(
+      `确认按实收 ${formatCents(amountCents)}${durationText}结账并结束「${seatLabel.value}」的会话？结账后座位将释放。`,
+      '结账并关台',
+      {
+        cancelButtonText: '再想想',
+        confirmButtonText: '确认结账',
+        type: 'warning',
+      },
+    );
+  } catch {
+    return;
+  }
+  settling.value = true;
+  try {
+    const result = await settleTableSessionApi(session.value.sessionId, {
+      amountCents,
+    });
+    const durationTip = isElapsed.value
+      ? `实际用时 ${result.consumptionRecord.durationMinutes} 分钟，`
+      : '';
+    ElMessage.success(
+      `结账成功，${durationTip}已扣款 ${formatCents(amountCents)}，${result.account.customerName} 余额 ${formatCents(result.account.balanceCents)}`,
+    );
+    visible.value = false;
+    emit('success');
+  } catch {
+    // 请求层统一提示错误，余额不足时座位保持占用
+  } finally {
+    settling.value = false;
+  }
+}
+
 async function closeSession() {
   if (!session.value) {
     return;
   }
   try {
     await ElMessageBox.confirm(
-      `确认结束「${seatLabel.value}」的消费并释放座位？已产生的消费流水不会回退。`,
-      '结束并释放座位',
+      `确认关台并结束「${seatLabel.value}」的会话？关台不结账：不会生成消费记录，也不会扣减余额。`,
+      '关台（不结账）',
       {
         cancelButtonText: '再想想',
-        confirmButtonText: '确认结束',
+        confirmButtonText: '确认关台',
         type: 'warning',
       },
     );
@@ -117,7 +211,7 @@ async function closeSession() {
   closing.value = true;
   try {
     await closeTableSessionApi(session.value.sessionId);
-    ElMessage.success(`${seatLabel.value} 已结束，座位已释放`);
+    ElMessage.success(`${seatLabel.value} 已关台，座位已释放`);
     visible.value = false;
     emit('success');
   } catch {
@@ -170,13 +264,17 @@ async function closeSession() {
       </svg>
       <div class="detail-hero__text">
         <span class="detail-hero__label">
-          {{ overtime ? '已超时' : '剩余时长' }}
+          {{ isElapsed ? '已用时长' : overtime ? '已超时' : '剩余时长' }}
         </span>
         <span class="detail-hero__time" :class="`is-${state}`">
-          {{ countdownText }}
+          {{ heroText }}
         </span>
         <span class="detail-hero__hint">
-          已购 {{ formatMinutes(session?.totalDurationMinutes ?? 0) }}
+          {{
+            isElapsed
+              ? '按实际用时结算'
+              : `已购 ${formatMinutes(session?.totalDurationMinutes ?? 0)}`
+          }}
         </span>
       </div>
     </div>
@@ -197,31 +295,49 @@ async function closeSession() {
         </span>
       </div>
       <div class="detail-item">
-        <span class="detail-item__label">应结束时间</span>
+        <span class="detail-item__label">
+          {{ isElapsed ? '计时方式' : '应结束时间' }}
+        </span>
         <span class="detail-item__value">
-          {{ session ? formatUtcDateTime(session.plannedEndTime) : '-' }}
+          {{
+            isElapsed
+              ? '实际计时'
+              : session?.plannedEndTime
+                ? formatUtcDateTime(session.plannedEndTime)
+                : '-'
+          }}
         </span>
       </div>
       <div class="detail-item">
-        <span class="detail-item__label">购买时长</span>
+        <span class="detail-item__label">
+          {{ isElapsed ? '已用时长' : '购买时长' }}
+        </span>
         <span class="detail-item__value">
-          {{ formatMinutes(session?.plannedDurationMinutes ?? 0) }}
+          {{
+            isElapsed
+              ? `${elapsedMinutes} 分钟`
+              : formatMinutes(session?.plannedDurationMinutes ?? 0)
+          }}
         </span>
       </div>
       <div class="detail-item">
-        <span class="detail-item__label">累计金额</span>
+        <span class="detail-item__label">
+          {{ isElapsed ? '预估金额' : '应付金额' }}
+        </span>
         <span class="detail-item__value font-mono text-[#2f9e8f]">
-          {{ formatCents(session?.totalAmountCents ?? 0) }}
+          {{ formatCents(payableCents) }}
         </span>
       </div>
     </div>
 
-    <div class="extend-panel">
+    <div v-if="!isElapsed" class="extend-panel">
       <div class="extend-panel__head">
         <span class="text-sm font-semibold text-[#2b2a28] dark:text-white">
           续时加钟
         </span>
-        <span class="text-xs text-[#8d8579]"> 从当前计划结束时间继续累加 </span>
+        <span class="text-xs text-[#8d8579]">
+          从当前计划结束时间继续累加，续时不扣款
+        </span>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <button
@@ -248,7 +364,7 @@ async function closeSession() {
           :min="0"
           :precision="2"
           class="w-28"
-          placeholder="金额（元）"
+          placeholder="预估金额（元）"
         />
         <ElButton :loading="extending" size="small" @click="submitExtend">
           确认续时
@@ -256,11 +372,64 @@ async function closeSession() {
       </div>
     </div>
 
+    <div v-else class="extend-panel">
+      <p class="text-xs text-[#8d8579]">
+        实际计时模式无需续时，结账时按开台至结账的实际用时结算。
+      </p>
+    </div>
+
+    <div class="settle-panel">
+      <div class="settle-panel__head">
+        <span class="text-sm font-semibold text-[#2b2a28] dark:text-white">
+          结账并关台
+        </span>
+        <span class="text-xs text-[#8d8579]">
+          {{
+            isElapsed
+              ? '按实际用时结算，实收金额由门店填写'
+              : '默认按应付金额收取，可下调为实收金额'
+          }}
+        </span>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <ElInputNumber
+          v-model="settleAmountYuan"
+          :controls="false"
+          :min="0"
+          :precision="2"
+          class="w-32"
+          placeholder="实收金额（元）"
+        />
+        <span class="text-xs text-[#6f685c] dark:text-white/60">
+          {{
+            isElapsed
+              ? `实际用时 ${elapsedMinutes} 分钟`
+              : `应付 ${formatCents(payableCents)} · 累计 ${formatMinutes(session?.totalDurationMinutes ?? 0)}`
+          }}
+        </span>
+        <ElButton
+          :loading="settling"
+          size="small"
+          type="primary"
+          @click="submitSettle"
+        >
+          结账并关台
+        </ElButton>
+      </div>
+      <p class="mt-2 text-xs text-[#8d8579]">
+        {{
+          isElapsed
+            ? '结账会按实际用时生成消费记录并扣减余额，成功后立即释放座位。'
+            : '结账会生成消费记录并扣减余额，成功后立即释放座位。'
+        }}
+      </p>
+    </div>
+
     <template #footer>
       <ElButton @click="visible = false">关闭</ElButton>
-      <ElButton :loading="closing" type="danger" @click="closeSession">
-        结束并释放座位
-      </ElButton>
+      <ElButton :loading="closing" @click="closeSession">
+关台（不结账）
+</ElButton>
     </template>
   </ElDialog>
 </template>
@@ -379,6 +548,26 @@ async function closeSession() {
   gap: 8px;
   align-items: baseline;
   margin-bottom: 10px;
+}
+
+.settle-panel {
+  padding: 12px 16px;
+  margin-top: 12px;
+  background: rgb(216 185 142 / 14%);
+  border: 1px dashed rgb(182 148 96 / 38%);
+  border-radius: 14px;
+}
+
+.settle-panel__head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+:global(.dark) .settle-panel {
+  background: rgb(216 185 142 / 10%);
+  border-color: rgb(216 185 142 / 22%);
 }
 
 .extend-chip {

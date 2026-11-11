@@ -192,14 +192,23 @@ export function createConsumption(
   }
 }
 
+interface PerformConsumptionOptions {
+  /**
+   * 结账场景专用：品类可能在会话进行中被下架，已发生消费的结账不应被上架状态拦截。
+   * 普通消费入口必须保持严格校验。
+   */
+  skipCategoryStatusCheck?: boolean;
+}
+
 /**
- * 校验客户、品类状态与余额，写入消费流水并扣减余额。
+ * 校验客户、品类与余额，写入消费流水并扣减余额。
  *
- * 仅供已经开启事务的业务流程（普通消费、开台、续时）调用，调用方负责事务边界。
+ * 仅供已经开启事务的业务流程（普通消费、开台会话结账）调用，调用方负责事务边界。
  */
-export function performConsumption(
+function performConsumptionInternal(
   database: BetterSqlite3.Database,
   input: CreateConsumptionInput,
+  options: PerformConsumptionOptions = {},
 ): ConsumptionTransactionResult {
   requireCustomer(database, input.customerId);
   const category = getCraftCategory(database, input.categoryId);
@@ -210,7 +219,10 @@ export function performConsumption(
     );
   }
   // 下架品类不可用于新增消费，历史消费记录不受影响
-  if (category.status !== CATEGORY_STATUS_ON) {
+  if (
+    !options.skipCategoryStatusCheck &&
+    category.status !== CATEGORY_STATUS_ON
+  ) {
     throw new BusinessError(
       'CATEGORY_OFF_SHELF',
       `手工品类已下架，不能用于新增消费（ID: ${input.categoryId}）`,
@@ -231,4 +243,22 @@ export function performConsumption(
     account.balanceCents - input.consumptionAmountCents,
   );
   return { account: updatedAccount, consumptionRecord };
+}
+
+/** 普通消费：品类必须处于上架状态。 */
+export function performConsumption(
+  database: BetterSqlite3.Database,
+  input: CreateConsumptionInput,
+): ConsumptionTransactionResult {
+  return performConsumptionInternal(database, input);
+}
+
+/** 开台会话结账：跳过品类上架校验，其余校验与普通消费一致。 */
+export function performSettlementConsumption(
+  database: BetterSqlite3.Database,
+  input: CreateConsumptionInput,
+): ConsumptionTransactionResult {
+  return performConsumptionInternal(database, input, {
+    skipCategoryStatusCheck: true,
+  });
 }

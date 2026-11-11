@@ -8,7 +8,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useEventListener, useIntervalFn } from '@vueuse/core';
 import { ElButton } from 'element-plus';
 
-import { getTableBoardApi } from '#/api/store';
+import { getTableBoardApi, TIMING_MODE_ELAPSED } from '#/api/store';
 
 import { formatCents } from '../shared';
 import BoardScene from './components/board-scene.vue';
@@ -90,7 +90,19 @@ const seats = computed<SeatBoardView[]>(() =>
         timeText: '点击开台',
       };
     }
-    const remainingMs = clock.remainingMs(item.session.plannedEndTime);
+    // 实际计时模式：无计划结束时间，从开台起正计时
+    if (item.session.timingMode === TIMING_MODE_ELAPSED) {
+      return {
+        item,
+        layout,
+        progress: 0,
+        remainingMs: 0,
+        state: 'active' as const,
+        timeText: `已用 ${formatCountdown(clock.elapsedMs(item.session.startTime))}`,
+      };
+    }
+    const plannedEndTime = item.session.plannedEndTime ?? '';
+    const remainingMs = clock.remainingMs(plannedEndTime);
     const totalMs = Math.max(item.session.plannedDurationMinutes, 1) * 60_000;
     return {
       item,
@@ -130,13 +142,24 @@ const syncedText = computed(() =>
 
 const detailRemainingMs = computed(() => {
   const session = detailSeat.value?.session;
-  return session ? clock.remainingMs(session.plannedEndTime) : 0;
+  if (!session || session.timingMode === TIMING_MODE_ELAPSED) {
+    return 0;
+  }
+  return clock.remainingMs(session.plannedEndTime ?? '');
+});
+const detailElapsedMs = computed(() => {
+  const session = detailSeat.value?.session;
+  return session && session.timingMode === TIMING_MODE_ELAPSED
+    ? clock.elapsedMs(session.startTime)
+    : 0;
 });
 const detailState = computed(() =>
-  resolveState(
-    detailRemainingMs.value,
-    detailSeat.value?.session?.plannedDurationMinutes ?? 0,
-  ),
+  detailSeat.value?.session?.timingMode === TIMING_MODE_ELAPSED
+    ? 'active'
+    : resolveState(
+        detailRemainingMs.value,
+        detailSeat.value?.session?.plannedDurationMinutes ?? 0,
+      ),
 );
 
 function handleSelect(seat: SeatBoardView) {
@@ -217,7 +240,7 @@ onMounted(() => loadBoard());
             <b>{{ summary?.todaySessionCount ?? 0 }}</b> 次
           </span>
           <span>
-            累计消费
+            累计已结
             <b>{{ formatCents(summary?.todayTotalAmountCents ?? 0) }}</b>
           </span>
           <span>
@@ -233,7 +256,7 @@ onMounted(() => loadBoard());
         <div>
           <h2>店内俯视看板</h2>
           <p>
-            上排三组四人桌、下排吧台长桌；点击空闲座位开台，使用中的座位可查看详情、续时或结束。
+            上排三组四人桌、下排吧台长桌；点击空闲座位开台，使用中的座位可查看详情、续时、结账或关台。
           </p>
         </div>
         <div class="board-legend">
@@ -263,6 +286,7 @@ onMounted(() => loadBoard());
     <OpenSessionDialog ref="openDialog" @success="handleSuccess" />
     <SessionDetailDialog
       v-model="detailVisible"
+      :elapsed-ms="detailElapsedMs"
       :remaining-ms="detailRemainingMs"
       :seat="detailSeat"
       :state="detailState"

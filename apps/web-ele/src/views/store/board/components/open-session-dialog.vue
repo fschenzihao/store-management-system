@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus';
 
-import type { CraftCategory, Customer, TableBoardItem } from '#/api/store';
+import type {
+  CraftCategory,
+  Customer,
+  TableBoardItem,
+  TableSessionTimingMode,
+} from '#/api/store';
 
 import { computed, onMounted, reactive, ref } from 'vue';
 
@@ -13,6 +18,8 @@ import {
   ElInputNumber,
   ElMessage,
   ElOption,
+  ElRadioButton,
+  ElRadioGroup,
   ElSelect,
 } from 'element-plus';
 
@@ -21,6 +28,8 @@ import {
   getCategoryListApi,
   getCustomerAccountApi,
   openTableSessionApi,
+  TIMING_MODE_ELAPSED,
+  TIMING_MODE_PURCHASED,
 } from '#/api/store';
 
 import CustomerSelect from '../../components/customer-select.vue';
@@ -55,29 +64,26 @@ const form = reactive<OpenForm>({
   durationMinutes: 60,
 });
 
+/** 计时方式：1=按购买时长倒计时、2=实际计时 */
+const timingMode = ref<TableSessionTimingMode>(TIMING_MODE_PURCHASED);
+const isElapsedMode = computed(() => timingMode.value === TIMING_MODE_ELAPSED);
+
 const seatLabel = computed(() =>
   table.value ? getSeatLayout(table.value.seatNo).label : '',
 );
 
-const remainingBalanceCents = computed(() => {
-  if (accountBalanceCents.value === null || form.amountYuan === undefined) {
-    return accountBalanceCents.value;
-  }
-  return accountBalanceCents.value - yuanToCents(form.amountYuan);
-});
-
 const rules: FormRules = {
   amountYuan: [
-    { message: '请输入消费金额', required: true, trigger: 'blur' },
+    { message: '请输入预估消费金额', required: true, trigger: 'blur' },
     {
       trigger: 'blur',
       validator: (_rule, value: number, callback) => {
         if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-          callback(new Error('消费金额不能小于 0 元'));
+          callback(new Error('预估消费金额不能小于 0 元'));
         } else if (Number.isSafeInteger(Math.round(value * 100))) {
           callback();
         } else {
-          callback(new Error('消费金额超出可处理范围'));
+          callback(new Error('预估消费金额超出可处理范围'));
         }
       },
     },
@@ -87,11 +93,13 @@ const rules: FormRules = {
   ],
   customerId: [{ message: '请选择客户', required: true, trigger: 'change' }],
   durationMinutes: [
-    { message: '请选择购买时长', required: true, trigger: 'change' },
     {
       trigger: 'change',
       validator: (_rule, value: number, callback) => {
-        if (!Number.isSafeInteger(value) || value <= 0) {
+        // 实际计时模式不使用购买时长，交由服务端按实际用时结算
+        if (isElapsedMode.value) {
+          callback();
+        } else if (!Number.isSafeInteger(value) || value <= 0) {
           callback(new Error('购买时长必须为大于 0 的整数分钟'));
         } else {
           callback();
@@ -158,6 +166,7 @@ async function open(item: TableBoardItem) {
   form.categoryId = undefined;
   form.customerId = undefined;
   form.durationMinutes = 60;
+  timingMode.value = TIMING_MODE_PURCHASED;
   accountBalanceCents.value = null;
   accountName.value = '';
   formRef.value?.clearValidate();
@@ -197,22 +206,28 @@ async function submit() {
     !table.value ||
     amountYuan === undefined ||
     categoryId === undefined ||
-    customerId === undefined ||
-    durationMinutes === undefined
+    customerId === undefined
   ) {
+    return;
+  }
+  const elapsedMode = isElapsedMode.value;
+  if (!elapsedMode && (durationMinutes === undefined || durationMinutes <= 0)) {
     return;
   }
   submitting.value = true;
   try {
     const result = await openTableSessionApi({
       categoryId,
-      consumptionAmountCents: yuanToCents(amountYuan),
       customerId,
-      durationMinutes,
+      durationMinutes: elapsedMode ? 0 : durationMinutes,
+      estimatedAmountCents: yuanToCents(amountYuan),
       tableId: table.value.tableId,
+      timingMode: timingMode.value,
     });
     ElMessage.success(
-      `${seatLabel.value} 开台成功，${result.account.customerName} 余额 ${formatCents(result.account.balanceCents)}`,
+      elapsedMode
+        ? `${seatLabel.value} 已开始实际计时，结账时按实际用时结算`
+        : `${seatLabel.value} 开台成功，预估应付 ${formatCents(result.session.totalAmountCents)}，结账时按实收金额扣款`,
     );
     visible.value = false;
     emit('success');
@@ -252,7 +267,7 @@ onMounted(ensureCategoriesLoaded);
     >
       <template v-if="accountBalanceCents !== null">
         <span class="text-[#6f685c] dark:text-white/60">
-          {{ accountName }} 当前余额
+          {{ accountName }} 当前余额（开台不扣款）
         </span>
         <span class="font-mono text-base font-semibold text-[#2f9e8f]">
           {{ formatCents(accountBalanceCents) }}
@@ -290,7 +305,16 @@ onMounted(ensureCategoriesLoaded);
         </ElSelect>
       </ElFormItem>
 
-      <ElFormItem label="购买时长" prop="durationMinutes">
+      <ElFormItem label="计时方式">
+        <ElRadioGroup v-model="timingMode">
+          <ElRadioButton :value="TIMING_MODE_PURCHASED">
+            按购买时长
+          </ElRadioButton>
+          <ElRadioButton :value="TIMING_MODE_ELAPSED">实际计时</ElRadioButton>
+        </ElRadioGroup>
+      </ElFormItem>
+
+      <ElFormItem v-if="!isElapsedMode" label="购买时长" prop="durationMinutes">
         <div class="w-full">
           <div class="flex flex-wrap items-center gap-1.5">
             <button
@@ -316,36 +340,36 @@ onMounted(ensureCategoriesLoaded);
             />
           </div>
           <p class="mt-1.5 text-xs text-[#8d8579]">
-            自定义时长单位为分钟，提交后开始倒计时。
+            自定义时长单位为分钟，开台后按该时长倒计时。
           </p>
         </div>
       </ElFormItem>
 
-      <ElFormItem label="消费金额" prop="amountYuan">
-        <ElInputNumber
-          v-model="form.amountYuan"
-          :controls="false"
-          :min="0"
-          :precision="2"
-          :step="1"
-          placeholder="请输入金额（元）"
-          style="width: 100%"
-        />
+      <ElFormItem v-else label="计时模式">
+        <div
+          class="w-full rounded-lg bg-[#2f9e8f]/8 px-3 py-2 text-xs text-[#6f685c] dark:text-white/60"
+        >
+          不设结束时间，从开台起按实际用时正计时；结账时按实际用时结算，无需续时。
+        </div>
+      </ElFormItem>
+
+      <ElFormItem label="预估消费金额" prop="amountYuan">
+        <div class="w-full">
+          <ElInputNumber
+            v-model="form.amountYuan"
+            :controls="false"
+            :min="0"
+            :precision="2"
+            :step="1"
+            placeholder="请输入预估金额（元）"
+            style="width: 100%"
+          />
+          <p class="mt-1.5 text-xs text-[#8d8579]">
+            开台不扣款，结账时按实收金额扣减余额。
+          </p>
+        </div>
       </ElFormItem>
     </ElForm>
-
-    <div
-      v-if="remainingBalanceCents !== null"
-      class="mt-2 flex items-center justify-between rounded-lg bg-[#2f9e8f]/8 px-4 py-2.5 text-xs"
-    >
-      <span class="text-[#6f685c] dark:text-white/60">扣款后余额</span>
-      <span
-        class="font-mono text-sm font-semibold"
-        :class="remainingBalanceCents < 0 ? 'text-[#e4572e]' : 'text-[#2f9e8f]'"
-      >
-        {{ formatCents(remainingBalanceCents) }}
-      </span>
-    </div>
 
     <template #footer>
       <ElButton @click="visible = false">取消</ElButton>

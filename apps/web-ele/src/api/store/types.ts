@@ -190,16 +190,27 @@ export interface CreateConsumptionParams {
   tableNumber?: null | number;
 }
 
+/** 计时方式：1=按购买时长倒计时、2=实际计时（不设计划结束时间）。 */
+export const TIMING_MODE_PURCHASED = 1;
+export const TIMING_MODE_ELAPSED = 2;
+
+export type TableSessionTimingMode =
+  | typeof TIMING_MODE_ELAPSED
+  | typeof TIMING_MODE_PURCHASED;
+
 /** 桌位看板：座位进行中的会话。 */
 export interface TableBoardSession {
   categoryId: number;
   categoryName: string;
   customerId: number;
   customerName: string;
+  /** 购买时长；实际计时模式为 0。 */
   plannedDurationMinutes: number;
-  plannedEndTime: string;
+  /** 计划结束时间；实际计时模式为 null，由前端正计时展示。 */
+  plannedEndTime: null | string;
   sessionId: number;
   startTime: string;
+  timingMode: TableSessionTimingMode;
   totalAmountCents: number;
   totalDurationMinutes: number;
 }
@@ -232,26 +243,40 @@ export interface TableSessionView extends TableBoardSession {
   status: number;
 }
 
-/** 开台成功后返回最新余额、消费流水与会话。 */
+/** 开台/续时返回的会话，不涉及资金动作。 */
 export interface TableSessionResult {
-  account: CustomerAccount;
-  consumptionRecord: ConsumptionRecord;
   session: TableSessionView;
 }
 
-/** 开台参数：桌位为座位级。 */
+/** 开台参数：桌位为座位级，金额为预估应付金额，开台时不扣款。 */
 export interface OpenTableSessionParams {
   categoryId: number;
-  consumptionAmountCents: number;
   customerId: number;
-  durationMinutes: number;
+  /** 购买时长（分钟）；实际计时模式传 0 或省略。 */
+  durationMinutes?: number;
+  /** 预估应付金额（分），购买时长模式下作为结账应付上限。 */
+  estimatedAmountCents: number;
   tableId: number;
+  /** 计时方式：1=按购买时长倒计时（默认）、2=实际计时。 */
+  timingMode?: TableSessionTimingMode;
 }
 
-/** 续时参数。 */
+/** 续时参数：金额为本次追加的预估应付金额，续时不扣款。 */
 export interface ExtendTableSessionParams {
-  consumptionAmountCents: number;
   durationMinutes: number;
+  estimatedAmountCents: number;
+}
+
+/** 结账参数：实收金额（分），允许低于应付金额，不得超过应付金额。 */
+export interface SettleTableSessionParams {
+  amountCents: number;
+}
+
+/** 结账成功后返回最新余额、消费流水与已结束的会话。 */
+export interface TableSessionSettlementResult {
+  account: CustomerAccount;
+  consumptionRecord: ConsumptionRecord;
+  session: TableSessionView;
 }
 
 /** 系统设置：默认客户与默认手工品类，未配置时为 null。 */

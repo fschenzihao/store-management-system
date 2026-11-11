@@ -85,7 +85,17 @@ export function useBoardClock() {
     return end - serverNow();
   }
 
+  /** 实际计时模式：从开台时间到服务端当前时间的已用毫秒数 */
+  function elapsedMs(startTime: string): number {
+    const start = parseUtcTimestamp(startTime);
+    if (Number.isNaN(start)) {
+      return 0;
+    }
+    return Math.max(serverNow() - start, 0);
+  }
+
   return {
+    elapsedMs,
     nowMs,
     offsetMs,
     pause,
